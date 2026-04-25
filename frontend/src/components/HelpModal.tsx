@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 export default function HelpModal() {
+  const { role } = useAuth()
+  const isAdmin = role === 'admin'
   const [open, setOpen] = useState(false)
 
   return (
@@ -33,28 +36,50 @@ export default function HelpModal() {
 
             <div style={{ padding: '20px' }}>
 
-              <Section title="Daily Flow">
-                <Step n="1" label="Jot throughout the day">
-                  Send anything to your Twilio WhatsApp number as you go — observations, quotes, funny moments, language wins. No format required. Send photos directly too.
-                </Step>
-                <Step n="2" label="Get your draft at 7:30 PM JST">
-                  The AI reads all your jottings, fills in all 9 journal sections in your voice, and sends you a preview on WhatsApp with word counts.
-                </Step>
-                <Step n="3" label="Edit via WhatsApp or the web app">
-                  Reply naturally in WhatsApp to fix anything — <em>"the Sony visit was actually 2 hours not 1"</em> — or open this app to edit directly. Both update the same draft.
-                </Step>
-                <Step n="4" label="Export and submit">
-                  Reply <Code>DONE</Code> on WhatsApp → tap the link → hit <strong>Export PDF → Canvas</strong> → upload to Canvas by <strong>8:00 PM JST</strong>.
-                </Step>
-              </Section>
+              {isAdmin ? (
+                <>
+                  <Section title="Daily Flow">
+                    <Step n="1" label="Jot throughout the day">
+                      Send anything to your Twilio WhatsApp number as you go — observations, quotes, funny moments, language wins. No format required. Send photos directly too.
+                    </Step>
+                    <Step n="2" label="Get your draft at 7:30 PM JST">
+                      The AI reads all your jottings, fills in all 9 journal sections in your voice, and sends you a preview on WhatsApp with word counts.
+                    </Step>
+                    <Step n="3" label="Edit via WhatsApp or the web app">
+                      Reply naturally in WhatsApp to fix anything — <em>"the Sony visit was actually 2 hours not 1"</em> — or open this app to edit directly. Both update the same draft.
+                    </Step>
+                    <Step n="4" label="Export and submit">
+                      Reply <Code>DONE</Code> on WhatsApp → tap the link → hit <strong>Export PDF → Canvas</strong> → upload to Canvas by <strong>8:00 PM JST</strong>.
+                    </Step>
+                  </Section>
 
-              <Section title="WhatsApp Commands">
-                <CommandRow cmd="HELP" desc="Show the command guide on WhatsApp" />
-                <CommandRow cmd="PING" desc="Check connection — replies with your phone number match status" />
-                <CommandRow cmd="VOICE: [your style]" desc="Set how the AI writes. Do this before May 11." />
-                <CommandRow cmd="TEST" desc="Generate a mock Day 5 Tokyo draft to test the full pipeline" />
-                <CommandRow cmd="DONE" desc="Approve your draft and get the export link" />
-              </Section>
+                  <Section title="WhatsApp Commands">
+                    <CommandRow cmd="HELP" desc="Show the command guide on WhatsApp" />
+                    <CommandRow cmd="PING" desc="Check connection — replies with your phone number match status" />
+                    <CommandRow cmd="VOICE: [your style]" desc="Set how the AI writes. Do this before May 11." />
+                    <CommandRow cmd="TEST" desc="Generate a mock Day 5 Tokyo draft to test the full pipeline" />
+                    <CommandRow cmd="DONE" desc="Approve your draft and get the export link" />
+                  </Section>
+                </>
+              ) : (
+                <Section title="How to use">
+                  <Step n="1" label="Pick your day">
+                    Tap any day from the feed. Each day shows the city and date from the trip schedule.
+                  </Step>
+                  <Step n="2" label="Fill out all 9 sections">
+                    Word counts are shown live — green means you're in range. Hit all the targets before exporting.
+                  </Step>
+                  <Step n="3" label="Upload 3–5 photos">
+                    Scroll to Section 8 and add photos with captions explaining why you chose each.
+                  </Step>
+                  <Step n="4" label="Export and submit">
+                    Hit <strong>Export PDF → Canvas</strong> at the bottom → upload the PDF to Canvas by <strong>8:00 PM JST</strong>.
+                  </Step>
+                  <div style={{ background: '#383a4a', borderRadius: 8, padding: '10px 12px', marginTop: 12, fontSize: 12, color: '#6272a4', lineHeight: 1.6 }}>
+                    💾 Your progress saves automatically in your browser. Come back anytime on the same device to continue editing before you export.
+                  </div>
+                </Section>
+              )}
 
               <Section title="Journal Template (9 Sections)">
                 <TemplateRow n="1" label="Activities Log" req="List business visits, meals, transport, language moments" />
@@ -85,14 +110,19 @@ export default function HelpModal() {
                 ))}
               </Section>
 
-              <Section title="AI & Academic Integrity">
-                <p style={{ fontSize: 13, color: '#f8f8f2', lineHeight: 1.7 }}>
-                  Your jottings are the authentic record of what you experienced. The AI organizes and expands them in your voice — it can't invent experiences you didn't have. Per Prof. Gomillion's AI policy, the journal must reflect your genuine in-person experiences. Always review the draft before exporting and make sure it accurately represents your day.
-                </p>
-              </Section>
+              {isAdmin && (
+                <Section title="AI & Academic Integrity">
+                  <p style={{ fontSize: 13, color: '#f8f8f2', lineHeight: 1.7 }}>
+                    Your jottings are the authentic record of what you experienced. The AI organizes and expands them in your voice — it can't invent experiences you didn't have. Per Prof. Gomillion's AI policy, the journal must reflect your genuine in-person experiences. Always review the draft before exporting and make sure it accurately represents your day.
+                  </p>
+                </Section>
+              )}
 
               <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#6272a4' }}>
-                Twilio sandbox: <strong style={{ color: '#f8f8f2' }}>+14155238886</strong> · Due nightly 8:00 PM JST
+                {isAdmin
+                  ? <>Twilio sandbox: <strong style={{ color: '#f8f8f2' }}>+14155238886</strong> · Due nightly 8:00 PM JST</>
+                  : 'Due nightly 8:00 PM JST · Submit via Canvas'
+                }
               </div>
             </div>
           </div>
