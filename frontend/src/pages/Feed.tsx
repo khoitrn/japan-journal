@@ -40,7 +40,7 @@ export default function Feed() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#128C7E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🇯🇵</div>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>Japan Journal</div>
+            <div style={{ fontWeight: 700, fontSize: 15, fontFamily: 'Raleway, sans-serif' }}>Japan Journal</div>
             <div style={{ fontSize: 12, opacity: 0.8 }}>ISTM 440 · May 11–24, 2026</div>
           </div>
         </div>

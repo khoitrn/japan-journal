@@ -29,9 +29,10 @@ export function printDay(entry: DayEntry): void {
 <meta charset="UTF-8"/>
 <title>Daily Travel Journal — Day ${entry.day}</title>
 <style>
-  body { font-family: Arial, sans-serif; font-size: 11pt; margin: 1in; color: #000; }
-  h1 { font-size: 14pt; text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; }
-  h2 { font-size: 12pt; background: #f0f0f0; padding: 4px 8px; margin-top: 20px; }
+  @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&display=swap');
+  body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; margin: 1in; color: #000; }
+  h1 { font-family: 'Raleway', sans-serif; font-size: 14pt; text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; }
+  h2 { font-family: 'Raleway', sans-serif; font-size: 12pt; background: #f0f0f0; padding: 4px 8px; margin-top: 20px; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
   th { background: #ddd; text-align: left; padding: 4px 8px; border: 1px solid #999; font-size: 10pt; }
   td { padding: 4px 8px; border: 1px solid #ccc; font-size: 10pt; vertical-align: top; }

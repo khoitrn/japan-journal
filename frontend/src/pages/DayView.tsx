@@ -87,7 +87,7 @@ export default function DayView() {
       <div style={{ background: '#075E54', color: '#f8f8f2', borderRadius: 10, padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 2 }}>ISTM 440 · Day {day} of 14</div>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>{tripDay.emoji} {tripDay.city}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Raleway, sans-serif' }}>{tripDay.emoji} {tripDay.city}</div>
           <div style={{ fontSize: 13, opacity: 0.85 }}>{tripDay.date} · Due 8:00 PM JST</div>
         </div>
         <button onClick={() => navigate('/')} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#f8f8f2', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
@@ -171,7 +171,7 @@ function Section({ title, hint, children }: { title: string; hint: string; child
   return (
     <div style={{ background: '#282a36', border: '1px solid #44475a', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
       <div style={{ background: '#383a4a', borderBottom: '1px solid #44475a', padding: '10px 16px' }}>
-        <div style={{ fontWeight: 600, fontSize: 14, color: '#bd93f9' }}>{title}</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: '#bd93f9', fontFamily: 'Raleway, sans-serif' }}>{title}</div>
         <div style={{ fontSize: 11, color: '#6272a4', marginTop: 2 }}>{hint}</div>
       </div>
       <div style={{ padding: '14px 16px' }}>{children}</div>
