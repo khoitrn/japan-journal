@@ -124,11 +124,14 @@ export default function AuthGate() {
             )}
 
             <div style={{ borderTop: '1px solid #44475a', paddingTop: 16 }}>
+              <div style={{ fontSize: 11, color: '#6272a4', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>ISTM 440 classmates</div>
               <button onClick={loginAsGuest}
-                style={{ background: 'none', border: '1px solid #44475a', borderRadius: 10, color: '#f8f8f2', fontSize: 13, padding: '10px 20px', cursor: 'pointer', width: '100%' }}>
-                Continue as Guest
+                style={{ background: '#383a4a', border: '1px solid #6272a4', borderRadius: 10, color: '#f8f8f2', fontSize: 14, fontWeight: 600, padding: '12px 20px', cursor: 'pointer', width: '100%', fontFamily: 'Raleway, sans-serif' }}>
+                👤 Continue as Guest →
               </button>
-              <div style={{ fontSize: 11, color: '#6272a4', marginTop: 8 }}>Fill & export the template — no AI or WhatsApp data</div>
+              <div style={{ fontSize: 11, color: '#6272a4', marginTop: 8, lineHeight: 1.5 }}>
+                Fill out the 9-section template, export PDF, submit to Canvas.<br />No login · your data stays in your browser.
+              </div>
             </div>
           </>
         )}
