@@ -24,6 +24,39 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
   // Only accept messages from the configured user
   if (from !== env.USER_PHONE) return twimlOk()
 
+  // HELP command
+  if (upperText === 'HELP') {
+    await sendWhatsApp(
+      env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN,
+      env.TWILIO_WHATSAPP_FROM, from,
+`📔 *Japan Journal — How to Use*
+ISTM 440 · May 11–24, 2026
+━━━━━━━━━━━━━━━
+
+*Throughout the day — just jot anything:*
+"visited Toyota factory, their assembly line uses AR"
+"said arigatou gozaimasu and the chef waved back"
+📸 Send photos directly — I'll save them
+No commands needed. Just talk to me.
+
+*Every night at 7:30 PM JST:*
+I'll send you a draft preview filled from your jottings. Reply naturally to fix anything — just type what you want to change and I'll update the right section.
+
+*When the draft looks good:*
+Reply *DONE* → get the export link → open the web app → Export PDF → submit to Canvas by *8:00 PM*
+
+*Commands:*
+HELP — show this message
+PING — check connection status
+VOICE: [your style] — set how I write (do this before May 11)
+TEST — generate a mock draft to test the flow
+DONE — approve draft and get export link
+
+*Web app & docs:*
+${env.APP_URL}`)
+    return twimlOk()
+  }
+
   // TEST command — bypasses date check, generates a draft from fake jottings
   if (text.toUpperCase() === 'TEST') {
     const testEntry: DayEntry = {
@@ -42,6 +75,9 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
       const voice = await getVoiceProfile(env.JOURNAL_KV)
       const sections = await generateDraft(env.CLAUDE_API_KEY, testEntry, voice)
       testEntry.sections = sections
+      testEntry.status = 'reviewing'
+      testEntry.draftGeneratedAt = new Date().toISOString()
+      await saveDay(env.JOURNAL_KV, testEntry)
       const preview = buildWhatsAppPreview(testEntry, env.APP_URL)
       await sendWhatsApp(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN, env.TWILIO_WHATSAPP_FROM, from, `🧪 *TEST MODE — Day 5 Tokyo mock draft:*\n\n${preview}`)
     } catch (e) {

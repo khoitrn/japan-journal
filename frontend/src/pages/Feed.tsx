@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { DayEntry } from '../types'
 import { fetchAllDays } from '../utils/api'
 import { TRIP_DAYS } from '../data/trip'
+import HelpModal from '../components/HelpModal'
 
 const STATUS_LABEL: Record<string, string> = {
   jotting:   '📝 Jotting',
@@ -114,6 +115,7 @@ export default function Feed() {
           📔 Due daily 8:00 PM JST · Submit via Canvas
         </div>
       </div>
+      <HelpModal />
     </div>
   )
 }

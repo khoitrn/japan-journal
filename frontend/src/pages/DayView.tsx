@@ -9,6 +9,7 @@ import ActivityTable from '../components/ActivityTable'
 import LanguageTable from '../components/LanguageTable'
 import ObjectivesTable from '../components/ObjectivesTable'
 import PhotoUpload from '../components/PhotoUpload'
+import HelpModal from '../components/HelpModal'
 
 const EMPTY_SECTIONS: JournalSections = {
   activities: [
@@ -150,6 +151,8 @@ export default function DayView() {
           rows={4} placeholder="What are you most looking forward to tomorrow? How will you build on today's learning?" style={textareaStyle} />
         <WordCounter text={sections.tomorrowsAnticipation} min={50} max={100} />
       </Section>
+
+      <HelpModal />
 
       {/* Bottom bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#282a36', borderTop: '1px solid #44475a', padding: '12px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end', zIndex: 100 }}>
