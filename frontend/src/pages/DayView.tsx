@@ -10,6 +10,7 @@ import LanguageTable from '../components/LanguageTable'
 import ObjectivesTable from '../components/ObjectivesTable'
 import PhotoUpload from '../components/PhotoUpload'
 import HelpModal from '../components/HelpModal'
+import { useAuth } from '../context/AuthContext'
 
 const EMPTY_SECTIONS: JournalSections = {
   activities: [
@@ -48,12 +49,21 @@ export default function DayView() {
   const day = parseInt(dayNum ?? '1')
   const tripDay = TRIP_DAYS.find(d => d.day === day)
 
+  const { role } = useAuth()
+  const isAdmin = role === 'admin'
   const [entry, setEntry] = useState<DayEntry | null>(null)
   const [sections, setSections] = useState<JournalSections>(EMPTY_SECTIONS)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
+    if (!isAdmin) {
+      // Guest: load from localStorage only
+      const saved = localStorage.getItem(`guest:day:${day}`)
+      if (saved) setSections(JSON.parse(saved))
+      if (tripDay) setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
+      return
+    }
     fetchDay(day).then(e => {
       if (e) { setEntry(e); if (e.sections) setSections(e.sections) }
       else if (tripDay) setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
@@ -67,7 +77,8 @@ export default function DayView() {
 
   const handleSave = async () => {
     setSaving(true)
-    await saveDay(day, sections)
+    if (isAdmin) await saveDay(day, sections)
+    else localStorage.setItem(`guest:day:${day}`, JSON.stringify(sections))
     setSaving(false)
     setSaved(true)
   }
@@ -95,8 +106,14 @@ export default function DayView() {
         </button>
       </div>
 
-      {/* Jottings banner */}
-      {entry && entry.jottings.length > 0 && (
+      {/* Guest banner */}
+      {!isAdmin && (
+        <div style={{ background: '#383a4a', border: '1px solid #6272a4', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#6272a4' }}>
+          👤 Guest mode — fill out the template and export your own PDF. Sign in as admin for AI drafts.
+        </div>
+      )}
+
+      {isAdmin && entry && entry.jottings.length > 0 && (
         <div style={{ background: '#383a4a', border: '1px solid #50fa7b', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#50fa7b' }}>
           📱 <strong>{entry.jottings.length} WhatsApp jotting{entry.jottings.length !== 1 ? 's' : ''}</strong>
           <span style={{ color: '#f8f8f2' }}> captured today — sections below were filled from these.</span>
