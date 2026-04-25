@@ -1,9 +1,6 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
 
-export default function HelpModal() {
-  const { role } = useAuth()
-  const isAdmin = role === 'admin'
+export default function HelpModal({ isAdmin = false }: { isAdmin?: boolean }) {
   const [open, setOpen] = useState(false)
 
   return (

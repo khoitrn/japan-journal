@@ -4,6 +4,7 @@ import type { DayEntry } from '../types'
 import { fetchAllDays } from '../utils/api'
 import { TRIP_DAYS } from '../data/trip'
 import HelpModal from '../components/HelpModal'
+import { useAuth } from '../context/AuthContext'
 
 const STATUS_LABEL: Record<string, string> = {
   jotting:   '📝 Jotting',
@@ -21,6 +22,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function Feed() {
   const navigate = useNavigate()
+  const { role } = useAuth()
   const [entries, setEntries] = useState<Map<number, DayEntry>>(new Map())
   const [loading, setLoading] = useState(true)
 
@@ -115,7 +117,7 @@ export default function Feed() {
           📔 Due daily 8:00 PM JST · Submit via Canvas
         </div>
       </div>
-      <HelpModal />
+      <HelpModal isAdmin={role === 'admin'} />
     </div>
   )
 }

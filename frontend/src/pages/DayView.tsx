@@ -169,7 +169,7 @@ export default function DayView() {
         <WordCounter text={sections.tomorrowsAnticipation} min={50} max={100} />
       </Section>
 
-      <HelpModal />
+      <HelpModal isAdmin={isAdmin} />
 
       {/* Bottom bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#282a36', borderTop: '1px solid #44475a', padding: '12px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end', zIndex: 100 }}>
