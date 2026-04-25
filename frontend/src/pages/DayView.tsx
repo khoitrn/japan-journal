@@ -54,12 +54,8 @@ export default function DayView() {
 
   useEffect(() => {
     fetchDay(day).then(e => {
-      if (e) {
-        setEntry(e)
-        if (e.sections) setSections(e.sections)
-      } else if (tripDay) {
-        setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
-      }
+      if (e) { setEntry(e); if (e.sections) setSections(e.sections) }
+      else if (tripDay) setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
     })
   }, [day])
 
@@ -81,27 +77,28 @@ export default function DayView() {
     printDay({ ...entry!, sections })
   }
 
-  if (!tripDay) return <div style={{ padding: 40, textAlign: 'center' }}>Day {day} not found.</div>
+  if (!tripDay) return <div style={{ padding: 40, textAlign: 'center', color: '#f8f8f2' }}>Day {day} not found.</div>
 
   return (
-    <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 16px 80px' }}>
+    <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 16px 80px', background: '#1e1f29', minHeight: '100vh' }}>
 
       {/* Header */}
-      <div style={{ background: '#075E54', color: '#fff', borderRadius: 10, padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ background: '#075E54', color: '#f8f8f2', borderRadius: 10, padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 2 }}>ISTM 440 · Day {day} of 14</div>
           <div style={{ fontSize: 20, fontWeight: 600 }}>{tripDay.emoji} {tripDay.city}</div>
           <div style={{ fontSize: 13, opacity: 0.85 }}>{tripDay.date} · Due 8:00 PM JST</div>
         </div>
-        <button onClick={() => navigate('/')} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
+        <button onClick={() => navigate('/')} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#f8f8f2', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
           ← All Days
         </button>
       </div>
 
-      {/* Jottings count */}
+      {/* Jottings banner */}
       {entry && entry.jottings.length > 0 && (
-        <div style={{ background: '#DCF8C6', border: '1px solid #b7dfa0', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13 }}>
-          📱 <strong>{entry.jottings.length} WhatsApp jotting{entry.jottings.length !== 1 ? 's' : ''}</strong> captured today — sections below were filled from these.
+        <div style={{ background: '#383a4a', border: '1px solid #50fa7b', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#50fa7b' }}>
+          📱 <strong>{entry.jottings.length} WhatsApp jotting{entry.jottings.length !== 1 ? 's' : ''}</strong>
+          <span style={{ color: '#f8f8f2' }}> captured today — sections below were filled from these.</span>
         </div>
       )}
 
@@ -110,24 +107,14 @@ export default function DayView() {
       </Section>
 
       <Section title="2. Technology & Business Insights" hint="100–150 words about Japanese technology management or business practices today.">
-        <textarea
-          value={sections.techInsights}
-          onChange={e => update('techInsights', e.target.value)}
-          rows={6}
-          placeholder="What did you learn today about Japanese technology management or business practices?"
-          style={textareaStyle}
-        />
+        <textarea value={sections.techInsights} onChange={e => update('techInsights', e.target.value)}
+          rows={6} placeholder="What did you learn about Japanese technology management or business practices?" style={textareaStyle} />
         <WordCounter text={sections.techInsights} min={100} max={150} />
       </Section>
 
       <Section title="3. Cultural Observations" hint="100–150 words on cultural elements observed and how they might influence business/technology.">
-        <textarea
-          value={sections.culturalObservations}
-          onChange={e => update('culturalObservations', e.target.value)}
-          rows={6}
-          placeholder="What cultural elements did you observe? How might they influence business or technology in Japan?"
-          style={textareaStyle}
-        />
+        <textarea value={sections.culturalObservations} onChange={e => update('culturalObservations', e.target.value)}
+          rows={6} placeholder="What cultural elements did you observe? How might they influence business or technology in Japan?" style={textareaStyle} />
         <WordCounter text={sections.culturalObservations} min={100} max={150} />
       </Section>
 
@@ -140,27 +127,17 @@ export default function DayView() {
       </Section>
 
       <Section title="6. Positive Reflections" hint="100–150 words total. Respond to at least 2 of the prompts below.">
-        <div style={{ background: '#f9f9f9', border: '1px solid #eee', borderRadius: 6, padding: '10px 14px', marginBottom: 10, fontSize: 12, color: '#555' }}>
+        <div style={{ background: '#383a4a', border: '1px solid #44475a', borderRadius: 6, padding: '10px 14px', marginBottom: 10, fontSize: 12, color: '#6272a4' }}>
           Pick at least 2: What new insight did you gain? · What delighted you? · Proudest accomplishment? · Beautiful thing you saw? · Connection you made? · Moment that made you smile? · Thing you hope to never forget? · What did you try outside your comfort zone?
         </div>
-        <textarea
-          value={sections.positiveReflections}
-          onChange={e => update('positiveReflections', e.target.value)}
-          rows={6}
-          placeholder="Your reflections..."
-          style={textareaStyle}
-        />
+        <textarea value={sections.positiveReflections} onChange={e => update('positiveReflections', e.target.value)}
+          rows={6} placeholder="Your reflections..." style={textareaStyle} />
         <WordCounter text={sections.positiveReflections} min={100} max={150} />
       </Section>
 
       <Section title="7. Questions & Curiosities" hint="50–100 words. What questions emerged today?">
-        <textarea
-          value={sections.questionsCuriosities}
-          onChange={e => update('questionsCuriosities', e.target.value)}
-          rows={4}
-          placeholder="What are you curious to learn more about? What questions came up today?"
-          style={textareaStyle}
-        />
+        <textarea value={sections.questionsCuriosities} onChange={e => update('questionsCuriosities', e.target.value)}
+          rows={4} placeholder="What are you curious to learn more about? What questions came up today?" style={textareaStyle} />
         <WordCounter text={sections.questionsCuriosities} min={50} max={100} />
       </Section>
 
@@ -169,18 +146,13 @@ export default function DayView() {
       </Section>
 
       <Section title="9. Tomorrow's Anticipation" hint="50–100 words. What are you most looking forward to tomorrow?">
-        <textarea
-          value={sections.tomorrowsAnticipation}
-          onChange={e => update('tomorrowsAnticipation', e.target.value)}
-          rows={4}
-          placeholder="What are you most looking forward to tomorrow? How will you build on today's learning?"
-          style={textareaStyle}
-        />
+        <textarea value={sections.tomorrowsAnticipation} onChange={e => update('tomorrowsAnticipation', e.target.value)}
+          rows={4} placeholder="What are you most looking forward to tomorrow? How will you build on today's learning?" style={textareaStyle} />
         <WordCounter text={sections.tomorrowsAnticipation} min={50} max={100} />
       </Section>
 
-      {/* Save / Export bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #ddd', padding: '12px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end', zIndex: 100 }}>
+      {/* Bottom bar */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#282a36', borderTop: '1px solid #44475a', padding: '12px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end', zIndex: 100 }}>
         <button onClick={handleSave} disabled={saving} style={saveBtn}>
           {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Draft'}
         </button>
@@ -194,10 +166,10 @@ export default function DayView() {
 
 function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
-      <div style={{ background: '#f7f7f7', borderBottom: '1px solid #e8e8e8', padding: '10px 16px' }}>
-        <div style={{ fontWeight: 600, fontSize: 14, color: '#111' }}>{title}</div>
-        <div style={{ fontSize: 11, color: '#777', marginTop: 2 }}>{hint}</div>
+    <div style={{ background: '#282a36', border: '1px solid #44475a', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
+      <div style={{ background: '#383a4a', borderBottom: '1px solid #44475a', padding: '10px 16px' }}>
+        <div style={{ fontWeight: 600, fontSize: 14, color: '#bd93f9' }}>{title}</div>
+        <div style={{ fontSize: 11, color: '#6272a4', marginTop: 2 }}>{hint}</div>
       </div>
       <div style={{ padding: '14px 16px' }}>{children}</div>
     </div>
@@ -205,34 +177,17 @@ function Section({ title, hint, children }: { title: string; hint: string; child
 }
 
 const textareaStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  border: '1px solid #ddd',
-  borderRadius: 6,
-  fontSize: 14,
-  fontFamily: 'inherit',
-  lineHeight: 1.6,
-  resize: 'vertical',
-  boxSizing: 'border-box',
+  width: '100%', padding: '10px 12px', border: '1px solid #6272a4', borderRadius: 6,
+  fontSize: 14, fontFamily: 'inherit', lineHeight: 1.6, resize: 'vertical',
+  background: '#21222c', color: '#f8f8f2', boxSizing: 'border-box',
 }
 
 const saveBtn: React.CSSProperties = {
-  padding: '10px 20px',
-  border: '1px solid #ddd',
-  borderRadius: 6,
-  background: '#fff',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 500,
+  padding: '10px 20px', border: '1px solid #6272a4', borderRadius: 6,
+  background: '#44475a', color: '#f8f8f2', cursor: 'pointer', fontSize: 14, fontWeight: 500,
 }
 
 const exportBtn: React.CSSProperties = {
-  padding: '10px 20px',
-  border: 'none',
-  borderRadius: 6,
-  background: '#075E54',
-  color: '#fff',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 600,
+  padding: '10px 20px', border: 'none', borderRadius: 6,
+  background: '#bd93f9', color: '#1e1f29', cursor: 'pointer', fontSize: 14, fontWeight: 700,
 }

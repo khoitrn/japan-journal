@@ -1,20 +1,42 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --bg:        #282a36;
+  --bg-dark:   #1e1f29;
+  --bg-card:   #44475a;
+  --bg-input:  #21222c;
+  --border:    #44475a;
+  --border-hi: #6272a4;
+  --text:      #f8f8f2;
+  --text-muted:#6272a4;
+  --green:     #50fa7b;
+  --purple:    #bd93f9;
+  --cyan:      #8be9fd;
+  --orange:    #ffb86c;
+  --red:       #ff5555;
+  --yellow:    #f1fa8c;
+  --pink:      #ff79c6;
+  --wa-header: #075E54;
+  --wa-accent: #25D366;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #ECE5DD;
-  color: #111;
+  background: var(--bg-dark);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
 textarea, input, select {
   font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text);
 }
 
-button {
-  font-family: inherit;
-}
+button { font-family: inherit; }
+
+::placeholder { color: var(--text-muted); }
 
 @media print {
-  body { background: #fff; }
+  body { background: #fff; color: #000; }
 }
