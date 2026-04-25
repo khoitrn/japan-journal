@@ -1,0 +1,20 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #ECE5DD;
+  color: #111;
+  -webkit-font-smoothing: antialiased;
+}
+
+textarea, input, select {
+  font-family: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+@media print {
+  body { background: #fff; }
+}

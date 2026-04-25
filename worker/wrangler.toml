@@ -1,0 +1,21 @@
+name = "japan-journal"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[triggers]
+# 10:30 AM UTC = 7:30 PM JST — runs every day May 11-24 trip window
+crons = ["30 10 * * *"]
+
+[[kv_namespaces]]
+binding = "JOURNAL_KV"
+id = "REPLACE_WITH_YOUR_KV_ID"
+
+[vars]
+APP_URL = "https://journal.khoitrn.com"
+
+# Secrets — set these via: wrangler secret put SECRET_NAME
+# TWILIO_ACCOUNT_SID
+# TWILIO_AUTH_TOKEN
+# TWILIO_WHATSAPP_FROM   (e.g. +14155238886 for sandbox)
+# CLAUDE_API_KEY
+# USER_PHONE             (your WhatsApp number, e.g. +12223334444)
