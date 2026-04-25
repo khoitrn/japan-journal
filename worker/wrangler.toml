@@ -8,7 +8,7 @@ crons = ["30 10 * * *"]
 
 [[kv_namespaces]]
 binding = "JOURNAL_KV"
-id = "REPLACE_WITH_YOUR_KV_ID"
+id = "55167b95c8d64d249cb31e502acde33a"
 
 [vars]
 APP_URL = "https://journal.khoitrn.com"

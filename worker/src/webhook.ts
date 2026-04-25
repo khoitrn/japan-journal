@@ -14,8 +14,41 @@ export async function handleWebhook(request: Request, env: Env): Promise<Respons
   const mediaUrl = params['MediaUrl0'] ?? undefined
   const mediaType = params['MediaContentType0'] ?? undefined
 
+  // DEBUG: log from vs USER_PHONE and reply so we can see the format
+  if (text.toUpperCase() === 'PING') {
+    await sendWhatsApp(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN, env.TWILIO_WHATSAPP_FROM, from,
+      `PING OK\nfrom: ${from}\nUSER_PHONE: ${env.USER_PHONE}\nmatch: ${from === env.USER_PHONE}`)
+    return twimlOk()
+  }
+
   // Only accept messages from the configured user
   if (from !== env.USER_PHONE) return twimlOk()
+
+  // TEST command — bypasses date check, generates a draft from fake jottings
+  if (text.toUpperCase() === 'TEST') {
+    const testEntry: DayEntry = {
+      day: 5,
+      date: '2026-05-15',
+      city: 'Tokyo',
+      status: 'jotting',
+      jottings: [
+        { id: '1', text: 'visited Sony HQ — their R&D lab had actual robots walking around', timestamp: new Date().toISOString() },
+        { id: '2', text: 'ramen at Ichiran, solo booth dining, everyone faces the wall — so different from eating out back home', timestamp: new Date().toISOString() },
+        { id: '3', text: 'used sumimasen to ask for directions and it actually worked, the guy walked me to the station', timestamp: new Date().toISOString() },
+        { id: '4', text: 'Shinkansen is insanely on time, like to the second, conductor bows when entering and leaving the car', timestamp: new Date().toISOString() },
+      ],
+    }
+    try {
+      const voice = await getVoiceProfile(env.JOURNAL_KV)
+      const sections = await generateDraft(env.CLAUDE_API_KEY, testEntry, voice)
+      testEntry.sections = sections
+      const preview = buildWhatsAppPreview(testEntry, env.APP_URL)
+      await sendWhatsApp(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN, env.TWILIO_WHATSAPP_FROM, from, `🧪 *TEST MODE — Day 5 Tokyo mock draft:*\n\n${preview}`)
+    } catch (e) {
+      await sendWhatsApp(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN, env.TWILIO_WHATSAPP_FROM, from, `⚠️ TEST failed: ${(e as Error).message}`)
+    }
+    return twimlOk()
+  }
 
   const today = todayJST()
   const tripDay = getDayForDate(today)

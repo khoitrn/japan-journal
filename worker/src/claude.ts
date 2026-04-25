@@ -1,5 +1,9 @@
 import type { DayEntry, JournalSections, VoiceProfile } from './types'
 
+function stripCodeFences(text: string): string {
+  return text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+}
+
 const COURSE_OBJECTIVES = `
 1. Japanese Technology Management Systems Analysis — R&D strategies, AI/robotics/IoT, how cultural values shape ethical frameworks
 2. Japanese Technology Ecosystem Comprehension — government-corporate-university partnerships, digital transformation in traditional industries
@@ -139,7 +143,7 @@ export async function generateDraft(
   }
 
   const data = await response.json() as { content: Array<{ text: string }> }
-  const text = data.content[0].text.trim()
+  const text = stripCodeFences(data.content[0].text)
   return JSON.parse(text) as JournalSections
 }
 
@@ -177,7 +181,7 @@ export async function applyEdit(
   }
 
   const data = await response.json() as { content: Array<{ text: string }> }
-  const text = data.content[0].text.trim()
+  const text = stripCodeFences(data.content[0].text)
   return JSON.parse(text)
 }
 
