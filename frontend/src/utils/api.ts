@@ -22,11 +22,11 @@ export async function fetchAllDays(): Promise<DayEntry[]> {
   return res.json()
 }
 
-export async function saveDay(dayNum: number, sections: JournalSections): Promise<DayEntry> {
+export async function saveDay(dayNum: number, sections: JournalSections, status = 'approved'): Promise<DayEntry> {
   const res = await fetch(`${BASE}/api/day/${dayNum}`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ sections, status: 'approved' }),
+    body: JSON.stringify({ sections, status }),
   })
   return res.json()
 }

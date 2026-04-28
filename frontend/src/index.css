@@ -37,7 +37,16 @@ textarea, input, select {
   color: var(--text);
 }
 
-button { font-family: inherit; }
+button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+  font-size: 16px; /* prevent iOS auto-zoom on focus */
+}
 
 ::placeholder { color: var(--text-muted); }
 

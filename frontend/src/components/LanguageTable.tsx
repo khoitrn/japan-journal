@@ -19,7 +19,8 @@ export default function LanguageTable({ rows, onChange }: Props) {
 
   return (
     <div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#383a4a' }}>
             <th style={th}>Include</th>
@@ -50,6 +51,7 @@ export default function LanguageTable({ rows, onChange }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
       <button onClick={addRow} style={addBtn}>+ Add language moment</button>
     </div>
   )

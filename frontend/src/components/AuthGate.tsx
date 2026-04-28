@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import KoiHero from './KoiHero'
 
 type Screen = 'main' | 'admin' | 'reset-request' | 'reset-confirm'
 
@@ -85,8 +86,9 @@ export default function AuthGate() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1e1f29', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#282a36', border: '1px solid #44475a', borderRadius: 16, padding: '28px 24px', width: '100%', maxWidth: 320, textAlign: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#1e1f29', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, position: 'relative' }}>
+      <KoiHero />
+      <div style={{ background: 'rgba(40,42,54,0.88)', backdropFilter: 'blur(6px)', border: '1px solid #44475a', borderRadius: 16, padding: '28px 24px', width: '100%', maxWidth: 320, textAlign: 'center', position: 'relative', zIndex: 1 }}>
 
         <div style={{ fontSize: 36, marginBottom: 6 }}>🇯🇵</div>
         <div style={{ fontFamily: 'Raleway, sans-serif', fontWeight: 700, fontSize: 18, color: '#f8f8f2', marginBottom: 2 }}>Japan Journal</div>

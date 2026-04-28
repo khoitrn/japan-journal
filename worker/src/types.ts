@@ -1,6 +1,7 @@
 export interface Jotting {
   id: string
   text: string
+  sectionHint?: string
   mediaUrl?: string
   mediaType?: string
   timestamp: string

@@ -1,5 +1,15 @@
 import type { DayEntry, JournalSections, VoiceProfile } from './types'
 
+const CITY_CONTEXT: Record<string, string> = {
+  'Sapporo':              'Hokkaido capital. Known for Hokkaido University research hub, precision agriculture and dairy tech, snow/tourism innovation, and Sapporo Breweries (est. 1876). Ainu indigenous culture. Cold climate drives unique engineering approaches.',
+  'Sapporo → Sendai':    'Travel day by Shinkansen. Passing through rural Tohoku landscape — an opportunity to observe infrastructure, transit punctuality, and regional contrasts with urban centers.',
+  'Sendai':               'Tohoku region hub. Tohoku University is a top research university known for pioneering disaster-response robotics after the 2011 earthquake/tsunami. Post-disaster reconstruction made Sendai a testbed for resilience tech. Date Masamune samurai history. Tanabata festival textile tradition.',
+  'Tokyo':                'Global tech and business hub. Akihabara (electronics), Shibuya (digital/startup culture), Roppongi (VC/startup scene). Home to Sony, SoftBank HQ area, Toyota showroom. Culture of extreme punctuality (Shinkansen to-the-second), vending machine density (~4M nationwide), convenience store supply-chain innovation, and nemawashi consensus decision-making.',
+  'Kyoto':                'Ancient capital balancing tradition with technology. Kyocera HQ. Nishijin textile district (automated looms preceded modern computing). Fushimi sake brewing (process automation + craft heritage). Temples use advanced preservation technology. Wabi-sabi and mono no aware philosophies visibly shape design aesthetics.',
+  'Hiroshima / Miyajima': 'Peace Memorial City — rebuilt entirely post-WWII, a living case study in urban reconstruction and resilience. Mazda HQ (rotary engine innovation, born here). Miyajima island: Itsukushima shrine, deer, sacred landscape. Contrast of industrial heritage and natural/cultural heritage.',
+  'Fukuoka':              'Japan\'s designated "startup special zone" city with deregulated business rules to attract entrepreneurs. PayPay and LINE Corp regional presence. Kyushu University strong on tech transfer. Proximity to Korea and China makes it Japan\'s most internationally minded city. Hakata textile tradition. Tonkotsu ramen originated here.',
+}
+
 function stripCodeFences(text: string): string {
   return text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
 }
@@ -50,17 +60,22 @@ JOURNAL TEMPLATE REQUIREMENTS:
 ${TEMPLATE_REQUIREMENTS}
 
 RULES — NEVER BREAK THESE:
-1. Only use facts, experiences, and observations the student actually mentioned in their jottings
-2. Never invent experiences, people, places, or details not in the jottings
-3. If a section has no relevant jottings, output exactly: "[NO JOTTINGS — PLEASE ADD]"
-4. Hit word count targets (expand the student's notes into full sentences in their voice)
-5. Sound like the student at their most articulate, not a corporate report
-6. The student's genuine voice is the product — protect it`
+1. Ground every sentence in something the student actually mentioned. Never invent experiences, people, or places.
+2. When a jotting is brief (a few words), expand it using your knowledge of the city's tech ecosystem, cultural landmarks, or historical context — but frame it as the student's reaction/observation, not a Wikipedia entry.
+3. Jottings with a section tag (shown as [→ section]) MUST go into that section — tag overrides your own judgment.
+4. If a section has zero relevant jottings (tagged or inferred), output exactly: "[NO JOTTINGS — PLEASE ADD]"
+5. Hit word count targets by expanding the student's notes in their voice — a short jotting is an invitation to flesh out, not a sign to skip.
+6. Sound like the student at their most articulate, not a corporate report.
+7. The student's genuine voice is the product — protect it.`
 }
 
 function buildUserPrompt(entry: DayEntry): string {
   const jottingsList = entry.jottings
-    .map((j, i) => `${i + 1}. [${j.timestamp}] ${j.text}${j.mediaUrl ? ' [📸 photo attached]' : ''}`)
+    .map((j, i) => {
+      const hint = j.sectionHint ? ` [→ ${j.sectionHint}]` : ''
+      const photo = j.mediaUrl ? ' [📸 photo attached]' : ''
+      return `${i + 1}. [${j.timestamp}]${hint} ${j.text}${photo}`
+    })
     .join('\n')
 
   const photoCount = entry.jottings.filter(j => j.mediaUrl).length
@@ -68,7 +83,9 @@ function buildUserPrompt(entry: DayEntry): string {
     .filter(j => j.mediaUrl)
     .map(j => j.mediaUrl!)
 
-  return `Day ${entry.day} — ${entry.city} (${entry.date})
+  const cityContext = CITY_CONTEXT[entry.city] ?? ''
+
+  return `Day ${entry.day} — ${entry.city} (${entry.date})${cityContext ? `\n\nLOCATION CONTEXT (use to expand brief jottings):\n${cityContext}` : ''}
 
 STUDENT'S JOTTINGS FROM TODAY:
 ${jottingsList || '(no jottings yet)'}

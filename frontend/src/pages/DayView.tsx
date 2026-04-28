@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { DayEntry, JournalSections } from '../types'
 import { fetchDay, saveDay, markExported } from '../utils/api'
@@ -53,46 +53,83 @@ export default function DayView() {
   const isAdmin = role === 'admin'
   const [entry, setEntry] = useState<DayEntry | null>(null)
   const [sections, setSections] = useState<JournalSections>(EMPTY_SECTIONS)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle')
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sectionsRef = useRef(sections)
+
+  const localKey = `journal:day:${day}`
 
   useEffect(() => {
+    // Restore from localStorage immediately so form is never blank on return
+    const cached = localStorage.getItem(localKey)
+    if (cached) {
+      const parsed = JSON.parse(cached) as JournalSections
+      setSections(parsed)
+      sectionsRef.current = parsed
+    }
+
     if (!isAdmin) {
-      // Guest: load from localStorage only
-      const saved = localStorage.getItem(`guest:day:${day}`)
-      if (saved) setSections(JSON.parse(saved))
       if (tripDay) setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
       return
     }
+
     fetchDay(day).then(e => {
-      if (e) { setEntry(e); if (e.sections) setSections(e.sections) }
-      else if (tripDay) setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
+      if (e) {
+        setEntry(e)
+        if (e.sections) {
+          setSections(e.sections)
+          sectionsRef.current = e.sections
+          localStorage.setItem(localKey, JSON.stringify(e.sections))
+        }
+      } else if (tripDay) {
+        setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
+      }
     })
   }, [day])
 
+  const persist = useCallback(async (s: JournalSections) => {
+    setSaveStatus('saving')
+    try {
+      if (isAdmin) await saveDay(day, s)
+      else localStorage.setItem(`guest:day:${day}`, JSON.stringify(s))
+      setSaveStatus('saved')
+    } catch {
+      setSaveStatus('error')
+    }
+  }, [isAdmin, day])
+
   const update = <K extends keyof JournalSections>(key: K, value: JournalSections[K]) => {
-    setSections(s => ({ ...s, [key]: value }))
-    setSaved(false)
+    const next = { ...sectionsRef.current, [key]: value }
+    sectionsRef.current = next
+    setSections(next)
+    localStorage.setItem(localKey, JSON.stringify(next))
+    setSaveStatus('pending')
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => persist(next), 1500)
   }
 
-  const handleSave = async () => {
-    setSaving(true)
-    if (isAdmin) await saveDay(day, sections)
-    else localStorage.setItem(`guest:day:${day}`, JSON.stringify(sections))
-    setSaving(false)
-    setSaved(true)
+  const handleClear = async () => {
+    if (!confirm('Clear all sections and start fresh?')) return
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    sectionsRef.current = EMPTY_SECTIONS
+    setSections(EMPTY_SECTIONS)
+    localStorage.removeItem(localKey)
+    setSaveStatus('idle')
+    setEntry(e => e ? { ...e, status: 'jotting', sections: undefined } : e)
+    if (isAdmin) await saveDay(day, EMPTY_SECTIONS, 'jotting')
   }
 
   const handleExport = async () => {
-    await handleSave()
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    await persist(sectionsRef.current)
     await markExported(day)
-    printDay({ ...entry!, sections })
+    printDay({ ...entry!, sections: sectionsRef.current })
   }
 
   if (!tripDay) return <div style={{ padding: 40, textAlign: 'center', color: '#f8f8f2' }}>Day {day} not found.</div>
 
   return (
-    <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 16px 80px', background: '#1e1f29', minHeight: '100vh' }}>
+    <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 16px 100px', background: '#1e1f29', minHeight: '100vh' }}>
 
       {/* Header */}
       <div style={{ background: '#075E54', color: '#f8f8f2', borderRadius: 10, padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -172,13 +209,15 @@ export default function DayView() {
       <HelpModal isAdmin={isAdmin} />
 
       {/* Bottom bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#282a36', borderTop: '1px solid #44475a', padding: '12px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end', zIndex: 100 }}>
-        <button onClick={handleSave} disabled={saving} style={saveBtn}>
-          {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Draft'}
-        </button>
-        <button onClick={handleExport} style={exportBtn}>
-          Export PDF → Canvas
-        </button>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#282a36', borderTop: '1px solid #44475a', padding: '10px 16px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', zIndex: 100 }}>
+        <span style={{ fontSize: 12, color: saveStatus === 'error' ? '#ff5555' : saveStatus === 'saved' ? '#50fa7b' : '#6272a4', marginRight: 'auto', minWidth: 0 }}>
+          {saveStatus === 'pending' && '● unsaved'}
+          {saveStatus === 'saving' && '↑ saving…'}
+          {saveStatus === 'saved'  && '✓ saved'}
+          {saveStatus === 'error'  && '⚠ failed'}
+        </span>
+        <button onClick={handleClear} style={clearBtn}>Clear</button>
+        <button onClick={handleExport} style={exportBtn}>Export PDF</button>
       </div>
     </div>
   )
@@ -202,9 +241,9 @@ const textareaStyle: React.CSSProperties = {
   background: '#21222c', color: '#f8f8f2', boxSizing: 'border-box',
 }
 
-const saveBtn: React.CSSProperties = {
-  padding: '10px 20px', border: '1px solid #6272a4', borderRadius: 6,
-  background: '#44475a', color: '#f8f8f2', cursor: 'pointer', fontSize: 14, fontWeight: 500,
+const clearBtn: React.CSSProperties = {
+  padding: '8px 16px', border: '1px solid #ff5555', borderRadius: 6,
+  background: 'transparent', color: '#ff5555', cursor: 'pointer', fontSize: 13,
 }
 
 const exportBtn: React.CSSProperties = {

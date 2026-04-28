@@ -11,7 +11,8 @@ export default function ObjectivesTable({ rows, onChange }: Props) {
   }
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+    <table style={{ width: '100%', minWidth: 400, borderCollapse: 'collapse', fontSize: 13 }}>
       <thead>
         <tr style={{ background: '#383a4a' }}>
           <th style={{ ...th, width: '38%' }}>Course Objective</th>
@@ -38,6 +39,7 @@ export default function ObjectivesTable({ rows, onChange }: Props) {
         ))}
       </tbody>
     </table>
+    </div>
   )
 }
 

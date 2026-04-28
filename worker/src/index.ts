@@ -2,6 +2,7 @@ import { handleWebhook } from './webhook'
 import { handleCron } from './cron'
 import { getDay, saveDay, getAllDays, saveVoiceProfile, getVoiceProfile } from './kv'
 import { isAdmin, handleLogin, handleLogout, handleResetRequest, handleResetConfirm, handleAuthStatus } from './auth'
+import { TRIP_DAYS } from './trip'
 
 export interface Env {
   JOURNAL_KV: KVNamespace
@@ -11,6 +12,7 @@ export interface Env {
   CLAUDE_API_KEY: string
   USER_PHONE: string
   APP_URL: string
+  SKIP_TWILIO?: string
 }
 
 function cors(res: Response): Response {
@@ -67,8 +69,12 @@ export default {
       if (request.method === 'POST') {
         const body = await request.json() as Record<string, unknown>
         const days = await getAllDays(env.JOURNAL_KV)
-        const entry = days.find(d => d.day === dayNum)
-        if (!entry) return json({ error: 'not found' }, 404)
+        let entry = days.find(d => d.day === dayNum)
+        if (!entry) {
+          const tripDay = TRIP_DAYS.find(d => d.day === dayNum)
+          if (!tripDay) return json({ error: 'not found' }, 404)
+          entry = { day: dayNum, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] }
+        }
         if (body.sections) entry.sections = body.sections as typeof entry.sections
         if (body.status)   entry.status   = body.status   as typeof entry.status
         await saveDay(env.JOURNAL_KV, entry)
