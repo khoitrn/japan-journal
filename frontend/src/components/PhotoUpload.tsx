@@ -7,19 +7,40 @@ interface Props {
   onChange: (photos: Photo[]) => void
 }
 
+async function canvasConvert(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      canvas.getContext('2d')!.drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('canvas decode failed')) }
+    img.src = url
+  })
+}
+
 async function toJpegDataUrl(file: File): Promise<string> {
   const name = file.name.toLowerCase()
   const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif')
   if (isHeic) {
-    const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 })
-    // heic2any returns Blob | Blob[] depending on number of frames
-    const blob = Array.isArray(result) ? result[0] : result
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = e => resolve(e.target?.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
+    // Try native canvas first (works in Safari on macOS/iOS), fall back to heic2any for Chrome
+    try {
+      return await canvasConvert(file)
+    } catch {
+      const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 })
+      const blob = Array.isArray(result) ? result[0] : result
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = e => resolve(e.target?.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    }
   }
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
