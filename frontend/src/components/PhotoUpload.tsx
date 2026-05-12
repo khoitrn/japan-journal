@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import heic2any from 'heic2any'
 import type { Photo } from '../types'
 
@@ -8,9 +8,12 @@ interface Props {
 }
 
 async function toJpegDataUrl(file: File): Promise<string> {
-  const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')
+  const name = file.name.toLowerCase()
+  const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif')
   if (isHeic) {
-    const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 }) as Blob
+    const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 })
+    // heic2any returns Blob | Blob[] depending on number of frames
+    const blob = Array.isArray(result) ? result[0] : result
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = e => resolve(e.target?.result as string)
@@ -29,12 +32,15 @@ async function toJpegDataUrl(file: File): Promise<string> {
 export default function PhotoUpload({ photos, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [converting, setConverting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files) return
+  const processFiles = useCallback(async (files: File[]) => {
     const remaining = 5 - photos.length
-    const batch = Array.from(files).slice(0, remaining)
+    const batch = files.filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)).slice(0, remaining)
+    if (!batch.length) return
     setConverting(true)
+    setError(null)
     try {
       const results: Photo[] = []
       for (const file of batch) {
@@ -42,9 +48,29 @@ export default function PhotoUpload({ photos, onChange }: Props) {
         results.push({ url, caption: '' })
       }
       onChange([...photos, ...results])
+    } catch (err) {
+      setError('Could not convert photo. Try exporting as JPEG from Photos first.')
+      console.error(err)
     } finally {
       setConverting(false)
     }
+  }, [photos, onChange])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) processFiles(Array.from(e.target.files))
+    e.target.value = ''
+  }
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const files = Array.from(e.clipboardData.files)
+    if (files.length) processFiles(files)
+  }, [processFiles])
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setDragging(false)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length) processFiles(files)
   }
 
   const updateCaption = (i: number, caption: string) => {
@@ -54,11 +80,21 @@ export default function PhotoUpload({ photos, onChange }: Props) {
   const remove = (i: number) => onChange(photos.filter((_, idx) => idx !== i))
 
   return (
-    <div>
+    <div
+      onPaste={handlePaste}
+      onDrop={handleDrop}
+      onDragOver={e => { e.preventDefault(); setDragging(true) }}
+      onDragLeave={() => setDragging(false)}
+    >
       <p style={{ fontSize: 12, color: '#6272a4', margin: '0 0 10px' }}>
-        Upload 3–5 photos. Add a brief caption explaining why you chose each. HEIC photos are converted automatically.
+        Upload 3–5 photos. Add a brief caption explaining why you chose each. HEIC converted automatically. You can also <strong>paste</strong> or <strong>drag &amp; drop</strong>.
       </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+      {error && (
+        <div style={{ background: '#ff555522', border: '1px solid #ff5555', borderRadius: 6, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#ff5555' }}>
+          {error}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, border: dragging ? '2px dashed #bd93f9' : '2px solid transparent', borderRadius: 8, padding: dragging ? 8 : 0, transition: 'all 0.15s' }}>
         {photos.map((photo, i) => (
           <div key={i} style={{ width: 160, background: '#44475a', border: '1px solid #6272a4', borderRadius: 6, overflow: 'hidden' }}>
             <div style={{ position: 'relative' }}>
@@ -87,7 +123,7 @@ export default function PhotoUpload({ photos, onChange }: Props) {
           </button>
         )}
       </div>
-      <input ref={inputRef} type="file" accept="image/*,.heic,.heif" multiple style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
+      <input ref={inputRef} type="file" accept="image/*,.heic,.heif" multiple style={{ display: 'none' }} onChange={handleInputChange} />
     </div>
   )
 }
