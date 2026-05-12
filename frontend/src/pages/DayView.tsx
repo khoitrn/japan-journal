@@ -61,14 +61,31 @@ export default function DayView() {
   const sectionsRef = useRef(sections)
 
   const localKey = `journal:day:${day}`
+  const photoKey = `journal:day:${day}:photos`
+
+  // Photos are stored in a separate localStorage key because base64 images
+  // can exceed the 5 MB quota and silently prevent the main key from saving.
+  const lsSet = (sections: JournalSections) => {
+    try { localStorage.setItem(localKey, JSON.stringify({ ...sections, photos: [] })) } catch { /* ignore */ }
+    try { localStorage.setItem(photoKey, JSON.stringify(sections.photos)) } catch { /* ignore quota on large photos */ }
+  }
+
+  const lsGet = (): JournalSections | null => {
+    const raw = localStorage.getItem(localKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as JournalSections
+    try {
+      const photos = localStorage.getItem(photoKey)
+      if (photos) parsed.photos = JSON.parse(photos)
+    } catch { /* ignore */ }
+    return parsed
+  }
 
   useEffect(() => {
-    // Restore from localStorage immediately so form is never blank on return
-    const cached = localStorage.getItem(localKey)
+    const cached = lsGet()
     if (cached) {
-      const parsed = JSON.parse(cached) as JournalSections
-      setSections(parsed)
-      sectionsRef.current = parsed
+      setSections(cached)
+      sectionsRef.current = cached
     }
 
     if (!isAdmin) {
@@ -82,7 +99,7 @@ export default function DayView() {
         if (e.sections) {
           setSections(e.sections)
           sectionsRef.current = e.sections
-          localStorage.setItem(localKey, JSON.stringify(e.sections))
+          lsSet(e.sections)
         }
       } else if (tripDay) {
         setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
@@ -105,7 +122,7 @@ export default function DayView() {
     const next = { ...sectionsRef.current, [key]: value }
     sectionsRef.current = next
     setSections(next)
-    localStorage.setItem(localKey, JSON.stringify(next))
+    lsSet(next)
     setSaveStatus('pending')
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => persist(next), 1500)
@@ -117,6 +134,7 @@ export default function DayView() {
     sectionsRef.current = EMPTY_SECTIONS
     setSections(EMPTY_SECTIONS)
     localStorage.removeItem(localKey)
+    localStorage.removeItem(photoKey)
     setSaveStatus('idle')
     setEntry(e => e ? { ...e, status: 'jotting', sections: undefined } : e)
     if (isAdmin) await saveDay(day, EMPTY_SECTIONS, 'jotting')
