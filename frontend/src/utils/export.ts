@@ -1,6 +1,6 @@
 import type { DayEntry } from '../types'
 
-export function printDay(entry: DayEntry): void {
+export function printDay(entry: DayEntry, name?: string): void {
   const sections = entry.sections
   if (!sections) return
 
@@ -38,6 +38,7 @@ export function printDay(entry: DayEntry): void {
   td { padding: 4px 8px; border: 1px solid #ccc; font-size: 10pt; vertical-align: top; }
   p { line-height: 1.6; }
   .meta { text-align: center; font-size: 10pt; color: #555; margin-bottom: 16px; }
+  .student-name { text-align: center; font-size: 11pt; font-weight: bold; margin: 4px 0 8px; }
   .photo-item { display: inline-block; width: 45%; margin: 8px; vertical-align: top; }
   .photo-item img { width: 100%; border: 1px solid #ccc; }
   .photo-item p { font-size: 9pt; margin: 4px 0; }
@@ -46,6 +47,7 @@ export function printDay(entry: DayEntry): void {
 </head>
 <body>
 <h1>DAILY TRAVEL JOURNAL — DAY ${entry.day}</h1>
+${name ? `<div class="student-name">${name}</div>` : ''}
 <div class="meta">Date: ${entry.date} &nbsp;|&nbsp; Location: ${entry.city}</div>
 
 <h2>1. ACTIVITIES LOG</h2>

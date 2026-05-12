@@ -12,7 +12,10 @@ import PhotoUpload from '../components/PhotoUpload'
 import HelpModal from '../components/HelpModal'
 import { useAuth } from '../context/AuthContext'
 
+const ADMIN_NAME = 'Khoi Tran'
+
 const EMPTY_SECTIONS: JournalSections = {
+  studentName: '',
   activities: [
     { type: 'Business Visit', details: '', include: false },
     { type: 'Cultural Activity', details: '', include: false },
@@ -122,8 +125,9 @@ export default function DayView() {
   const handleExport = async () => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     await persist(sectionsRef.current)
-    await markExported(day)
-    printDay({ ...entry!, sections: sectionsRef.current })
+    if (isAdmin) await markExported(day)
+    const exportName = isAdmin ? ADMIN_NAME : (sectionsRef.current.studentName?.trim() || undefined)
+    printDay({ ...entry!, sections: sectionsRef.current }, exportName)
   }
 
   if (!tripDay) return <div style={{ padding: 40, textAlign: 'center', color: '#f8f8f2' }}>Day {day} not found.</div>
@@ -154,6 +158,21 @@ export default function DayView() {
         <div style={{ background: '#383a4a', border: '1px solid #50fa7b', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#50fa7b' }}>
           📱 <strong>{entry.jottings.length} WhatsApp jotting{entry.jottings.length !== 1 ? 's' : ''}</strong>
           <span style={{ color: '#f8f8f2' }}> captured today — sections below were filled from these.</span>
+        </div>
+      )}
+
+      {!isAdmin && (
+        <div style={{ background: '#282a36', border: '1px solid #44475a', borderRadius: 10, marginBottom: 16, padding: '14px 16px' }}>
+          <label style={{ fontSize: 13, color: '#6272a4', display: 'block', marginBottom: 6 }}>
+            Your Name <span style={{ fontSize: 11 }}>(optional — appears on exported PDF)</span>
+          </label>
+          <input
+            type="text"
+            value={sections.studentName ?? ''}
+            onChange={e => update('studentName', e.target.value)}
+            placeholder="e.g. Jane Smith"
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #6272a4', borderRadius: 6, background: '#21222c', color: '#f8f8f2', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
         </div>
       )}
 

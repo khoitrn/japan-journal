@@ -30,6 +30,7 @@ export interface Photo {
 }
 
 export interface JournalSections {
+  studentName?: string
   activities: ActivityRow[]
   techInsights: string
   culturalObservations: string
