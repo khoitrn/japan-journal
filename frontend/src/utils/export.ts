@@ -23,6 +23,7 @@ export function printDay(entry: DayEntry, name?: string): void {
     .map(p => `<div class="photo-item"><img src="${p.url}" /><p>${p.caption}</p></div>`)
     .join('')
 
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -32,16 +33,17 @@ export function printDay(entry: DayEntry, name?: string): void {
   @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&display=swap');
   body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; margin: 1in; color: #000; }
   h1 { font-family: 'Raleway', sans-serif; font-size: 14pt; text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; }
-  h2 { font-family: 'Raleway', sans-serif; font-size: 12pt; background: #f0f0f0; padding: 4px 8px; margin-top: 20px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  h2 { font-family: 'Raleway', sans-serif; font-size: 12pt; background: #f0f0f0; padding: 4px 8px; margin-top: 20px; page-break-after: avoid; break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; page-break-inside: avoid; break-inside: avoid; }
   th { background: #ddd; text-align: left; padding: 4px 8px; border: 1px solid #999; font-size: 10pt; }
   td { padding: 4px 8px; border: 1px solid #ccc; font-size: 10pt; vertical-align: top; }
   p { line-height: 1.6; }
   .meta { text-align: center; font-size: 10pt; color: #555; margin-bottom: 16px; }
   .student-name { text-align: center; font-size: 11pt; font-weight: bold; margin: 4px 0 8px; }
-  .photo-item { display: inline-block; width: 45%; margin: 8px; vertical-align: top; }
-  .photo-item img { width: 100%; border: 1px solid #ccc; }
-  .photo-item p { font-size: 9pt; margin: 4px 0; }
+  .photos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 10px; }
+  .photo-item { page-break-inside: avoid; break-inside: avoid; }
+  .photo-item img { width: 100%; max-height: 220px; object-fit: cover; border: 1px solid #ccc; display: block; }
+  .photo-item p { font-size: 9pt; margin: 4px 0 0; }
   @media print { body { margin: 0.75in; } }
 </style>
 </head>
@@ -81,7 +83,7 @@ ${name ? `<div class="student-name">${name}</div>` : ''}
 <p>${sections.questionsCuriosities}</p>
 
 <h2>8. VISUAL DOCUMENTATION</h2>
-<div>${photos || '<p>No photos uploaded.</p>'}</div>
+<div class="photos-grid">${photos || '<p>No photos uploaded.</p>'}</div>
 
 <h2>9. TOMORROW'S ANTICIPATION</h2>
 <p>${sections.tomorrowsAnticipation}</p>
