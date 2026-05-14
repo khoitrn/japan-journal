@@ -7,17 +7,25 @@ interface Props {
   onChange: (photos: Photo[]) => void
 }
 
+const MAX_DIM = 1600  // cap iPhone 48MP photos to ~2MP so base64 stays under storage limits
+
 async function canvasConvert(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight
+      if (w > MAX_DIM || h > MAX_DIM) {
+        const ratio = Math.min(MAX_DIM / w, MAX_DIM / h)
+        w = Math.round(w * ratio)
+        h = Math.round(h * ratio)
+      }
       const canvas = document.createElement('canvas')
-      canvas.width = img.naturalWidth
-      canvas.height = img.naturalHeight
-      canvas.getContext('2d')!.drawImage(img, 0, 0)
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
       URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.85))
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('canvas decode failed')) }
     img.src = url
