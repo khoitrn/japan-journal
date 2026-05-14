@@ -62,19 +62,20 @@ export default function PhotoUpload({ photos, onChange }: Props) {
     if (!batch.length) return
     setConverting(true)
     setError(null)
-    try {
-      const results: Photo[] = []
-      for (const file of batch) {
+    const results: Photo[] = []
+    let failed = 0
+    for (const file of batch) {
+      try {
         const url = await toJpegDataUrl(file)
         results.push({ url, caption: '' })
+      } catch (err) {
+        failed++
+        console.error(err)
       }
-      onChange([...photos, ...results])
-    } catch (err) {
-      setError('Could not convert photo. Try exporting as JPEG from Photos first.')
-      console.error(err)
-    } finally {
-      setConverting(false)
     }
+    if (results.length) onChange([...photos, ...results])
+    if (failed) setError(`${failed} photo${failed > 1 ? 's' : ''} couldn't be converted — try exporting as JPEG from Photos first.`)
+    setConverting(false)
   }, [photos, onChange])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,8 +112,9 @@ export default function PhotoUpload({ photos, onChange }: Props) {
         Upload 3–5 photos. Add a brief caption explaining why you chose each. HEIC converted automatically. You can also <strong>paste</strong> or <strong>drag &amp; drop</strong>.
       </p>
       {error && (
-        <div style={{ background: '#ff555522', border: '1px solid #ff5555', borderRadius: 6, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#ff5555' }}>
-          {error}
+        <div style={{ background: '#ff555522', border: '1px solid #ff5555', borderRadius: 6, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#ff5555', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: '#ff5555', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
         </div>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, border: dragging ? '2px dashed #bd93f9' : '2px solid transparent', borderRadius: 8, padding: dragging ? 8 : 0, transition: 'all 0.15s' }}>
