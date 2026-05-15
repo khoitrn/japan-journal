@@ -13,7 +13,7 @@ id = "55167b95c8d64d249cb31e502acde33a"
 [[d1_databases]]
 binding = "DB"
 database_name = "japan-journal-db"
-database_id = "FILL_IN_AFTER_CREATE"
+database_id = "a314fb17-8b19-4576-a172-8bbc4330edbe"
 
 [[r2_buckets]]
 binding = "PHOTOS_R2"
