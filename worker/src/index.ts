@@ -63,8 +63,10 @@ export default {
     if (dayMatch) {
       const dayNum = parseInt(dayMatch[1])
       if (request.method === 'GET') {
-        const days = await getAllDays(env.JOURNAL_KV)
-        return json(days.find(d => d.day === dayNum) ?? null)
+        const tripDay = TRIP_DAYS.find(d => d.day === dayNum)
+        if (!tripDay) return json(null, 404)
+        const entry = await getDay(env.JOURNAL_KV, tripDay.date)
+        return json(entry)
       }
       if (request.method === 'POST') {
         const body = await request.json() as Record<string, unknown>

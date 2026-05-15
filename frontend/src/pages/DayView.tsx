@@ -98,9 +98,16 @@ export default function DayView() {
       if (e) {
         setEntry(e)
         if (e.sections) {
-          setSections(e.sections)
-          sectionsRef.current = e.sections
-          lsSet(e.sections)
+          // KV is eventually consistent — a read right after a write may return
+          // stale data with no photos. Prefer whichever source has more photos.
+          const local = lsGet()
+          const merged = { ...e.sections }
+          if ((local?.photos?.length ?? 0) > (merged.photos?.length ?? 0)) {
+            merged.photos = local!.photos
+          }
+          setSections(merged)
+          sectionsRef.current = merged
+          lsSet(merged)
         }
       } else if (tripDay) {
         setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
