@@ -61,9 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {})
     }
-    // Clear this role's localStorage cache so the other role never sees it
-    const prefix = role === 'admin' ? 'admin:journal:' : 'guest:journal:'
-    Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k))
+    // Clear admin cache on logout so another user on this browser can't see it.
+    // Guest cache is intentionally kept — it's local-only and they may sign back in.
+    if (role === 'admin') {
+      Object.keys(localStorage).filter(k => k.startsWith('admin:journal:')).forEach(k => localStorage.removeItem(k))
+    }
     sessionStorage.removeItem('admin_token')
     sessionStorage.removeItem('guest')
     setToken(null)
