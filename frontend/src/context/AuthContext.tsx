@@ -61,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {})
     }
+    // Clear this role's localStorage cache so the other role never sees it
+    const prefix = role === 'admin' ? 'admin:journal:' : 'guest:journal:'
+    Object.keys(localStorage).filter(k => k.startsWith(prefix)).forEach(k => localStorage.removeItem(k))
     sessionStorage.removeItem('admin_token')
     sessionStorage.removeItem('guest')
     setToken(null)

@@ -61,8 +61,8 @@ export default function DayView() {
   const sectionsRef = useRef(sections)
   const pendingSync = useRef(false)
 
-  const localKey = `journal:day:${day}`
-  const photoKey = `journal:day:${day}:photos`
+  const localKey = `${role}:journal:day:${day}`
+  const photoKey = `${role}:journal:day:${day}:photos`
 
   // Photos are stored in a separate localStorage key because base64 images
   // can exceed the 5 MB quota and silently prevent the main key from saving.
