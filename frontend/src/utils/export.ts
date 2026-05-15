@@ -1,7 +1,7 @@
 import type { DayEntry } from '../types'
 
 async function toEmbeddedDataUrl(url: string): Promise<string> {
-  if (!url || url.startsWith('data:')) return url  // already embedded (guest base64)
+  if (!url || url.startsWith('data:')) return url
   try {
     const res = await fetch(url)
     const blob = await res.blob()
@@ -12,7 +12,7 @@ async function toEmbeddedDataUrl(url: string): Promise<string> {
       reader.readAsDataURL(blob)
     })
   } catch {
-    return url  // fall back to URL if fetch fails
+    return url
   }
 }
 
@@ -34,8 +34,8 @@ export async function printDay(entry: DayEntry, name?: string): Promise<void> {
     .map(o => `<tr><td>${o.objectiveLabel} (Obj. ${o.objectiveKey.replace('obj', '')})</td><td>${o.connection}</td></tr>`)
     .join('')
 
-  // Pre-fetch all photos as embedded data URLs so the print window
-  // is fully self-contained — no network waits after it opens.
+  // Pre-fetch all photos as embedded data URLs before building HTML.
+  // This makes the document fully self-contained with zero network deps.
   const photoUrls = await Promise.all(
     sections.photos.filter(p => p.url).map(p => toEmbeddedDataUrl(p.url))
   )
@@ -50,10 +50,10 @@ export async function printDay(entry: DayEntry, name?: string): Promise<void> {
 <meta charset="UTF-8"/>
 <title>Daily Travel Journal — Day ${entry.day}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@600;700&display=swap');
+  /* No external font imports — fully self-contained so load fires reliably */
   body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; margin: 1in; color: #000; }
-  h1 { font-family: 'Raleway', sans-serif; font-size: 14pt; text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; }
-  h2 { font-family: 'Raleway', sans-serif; font-size: 12pt; background: #f0f0f0; padding: 4px 8px; margin-top: 20px; page-break-after: avoid; break-after: avoid; }
+  h1 { font-family: Arial, Helvetica, sans-serif; font-size: 14pt; text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; }
+  h2 { font-family: Arial, Helvetica, sans-serif; font-size: 12pt; background: #f0f0f0; padding: 4px 8px; margin-top: 20px; page-break-after: avoid; break-after: avoid; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; page-break-inside: avoid; break-inside: avoid; }
   th { background: #ddd; text-align: left; padding: 4px 8px; border: 1px solid #999; font-size: 10pt; }
   td { padding: 4px 8px; border: 1px solid #ccc; font-size: 10pt; vertical-align: top; }
@@ -110,34 +110,17 @@ ${name ? `<div class="student-name">${name}</div>` : ''}
 </body>
 </html>`
 
-  const win = window.open('', '_blank')
-  if (!win) return
-  win.document.write(html)
-  win.document.close()
-  win.focus()
+  // Use a Blob URL so the window loads like a normal page.
+  // This gives us a reliable load event that fires only after all
+  // inline base64 images are fully decoded and the page is ready to print.
+  const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
+  const blobUrl = URL.createObjectURL(blob)
+  const win = window.open(blobUrl, '_blank')
+  if (!win) { URL.revokeObjectURL(blobUrl); return }
 
-  // Wait for all images to finish decoding before triggering print.
-  // Even with embedded data URLs the browser still needs to decode them,
-  // and calling print() too early causes a blank first attempt.
-  await new Promise<void>(resolve => {
-    const tryPrint = () => {
-      const imgs = Array.from(win.document.images)
-      const pending = imgs.filter(img => !img.complete)
-      if (pending.length === 0) { resolve(); return }
-      let remaining = pending.length
-      const done = () => { if (--remaining === 0) resolve() }
-      pending.forEach(img => {
-        img.addEventListener('load', done, { once: true })
-        img.addEventListener('error', done, { once: true })
-      })
-    }
-    if (win.document.readyState === 'complete') {
-      tryPrint()
-    } else {
-      win.addEventListener('load', tryPrint, { once: true })
-    }
-    setTimeout(resolve, 6000)  // safety fallback
-  })
-
-  win.print()
+  win.addEventListener('load', () => {
+    win.focus()
+    win.print()
+    URL.revokeObjectURL(blobUrl)
+  }, { once: true })
 }
