@@ -31,6 +31,25 @@ export async function saveDay(dayNum: number, sections: JournalSections, status 
   return res.json()
 }
 
+export async function uploadPhoto(dayNum: number, file: File): Promise<{ id: string; url: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE}/api/photos/${dayNum}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token()}` },
+    body: form,
+  })
+  if (!res.ok) throw new Error('Upload failed')
+  return res.json()
+}
+
+export async function deletePhoto(id: string): Promise<void> {
+  await fetch(`${BASE}/api/photos/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+}
+
 export async function markExported(dayNum: number): Promise<void> {
   await fetch(`${BASE}/api/day/${dayNum}/export`, { method: 'POST', headers: authHeaders() })
 }

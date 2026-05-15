@@ -1,4 +1,4 @@
-import { getDay, saveDay, getVoiceProfile } from './kv'
+import { getDay, upsertDay, getVoiceProfile } from './db'
 import { generateDraft, buildWhatsAppPreview } from './claude'
 import { sendWhatsApp } from './twilio'
 import { getDayForDate, todayJST } from './trip'
@@ -19,7 +19,7 @@ export async function handleCron(env: Env): Promise<void> {
   // Not a trip day — skip
   if (!tripDay) return
 
-  let entry = await getDay(env.JOURNAL_KV, today)
+  let entry = await getDay(env.DB, tripDay.day)
 
   // No jottings at all — still generate an empty draft and remind them
   if (!entry) {
@@ -36,12 +36,12 @@ export async function handleCron(env: Env): Promise<void> {
   if (entry.status === 'approved' || entry.status === 'exported') return
 
   try {
-    const voice = await getVoiceProfile(env.JOURNAL_KV)
+    const voice = await getVoiceProfile(env.DB)
     const sections = await generateDraft(env.CLAUDE_API_KEY, entry, voice)
     entry.sections = sections
     entry.status = 'reviewing'
     entry.draftGeneratedAt = new Date().toISOString()
-    await saveDay(env.JOURNAL_KV, entry)
+    await upsertDay(env.DB, entry)
 
     const preview = buildWhatsAppPreview(entry, env.APP_URL)
     await notify(env, env.USER_PHONE, preview)

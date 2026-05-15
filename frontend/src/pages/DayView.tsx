@@ -253,7 +253,7 @@ export default function DayView() {
       </Section>
 
       <Section title="8. Visual Documentation" hint="Upload 3–5 photos with captions explaining why you chose each.">
-        <PhotoUpload photos={sections.photos} onChange={v => update('photos', v)} />
+        <PhotoUpload photos={sections.photos} onChange={v => update('photos', v)} isAdmin={isAdmin} dayNum={day} />
       </Section>
 
       <Section title="9. Tomorrow's Anticipation" hint="50–100 words. What are you most looking forward to tomorrow?">

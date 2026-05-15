@@ -1,5 +1,5 @@
 import { parseTwilioBody, sendWhatsApp, twimlOk } from './twilio'
-import { getDay, saveDay, getVoiceProfile } from './kv'
+import { getDay, upsertDay, getVoiceProfile, saveVoiceProfile } from './db'
 import { generateDraft, applyEdit, buildWhatsAppPreview } from './claude'
 import { getDayForDate, todayJST } from './trip'
 import type { DayEntry, Jotting } from './types'
@@ -117,12 +117,12 @@ ${env.APP_URL}`)
       ],
     }
     try {
-      const voice = await getVoiceProfile(env.JOURNAL_KV)
+      const voice = await getVoiceProfile(env.DB)
       const sections = await generateDraft(env.CLAUDE_API_KEY, testEntry, voice)
       testEntry.sections = sections
       testEntry.status = 'reviewing'
       testEntry.draftGeneratedAt = new Date().toISOString()
-      await saveDay(env.JOURNAL_KV, testEntry)
+      await upsertDay(env.DB, testEntry)
       const preview = buildWhatsAppPreview(testEntry, env.APP_URL)
       await notify(env, from, `🧪 *TEST MODE — Day 5 Tokyo mock draft:*\n\n${preview}`)
     } catch (e) {
@@ -140,7 +140,7 @@ ${env.APP_URL}`)
     return twimlOk()
   }
 
-  let entry = await getDay(env.JOURNAL_KV, today)
+  let entry = await getDay(env.DB, tripDay.day)
   if (!entry) {
     entry = {
       day: tripDay.day,
@@ -154,7 +154,7 @@ ${env.APP_URL}`)
   // Handle DONE / LOOKS GOOD → approve draft and send export link
   if (entry.status === 'reviewing' && (upperText === 'DONE' || upperText.startsWith('LOOKS GOOD'))) {
     entry.status = 'approved'
-    await saveDay(env.JOURNAL_KV, entry)
+    await upsertDay(env.DB, entry)
     await notify(env, from,
       `✅ *Day ${entry.day} approved!*\n\nOpen to review and export your PDF:\n${env.APP_URL}/day/${entry.day}\n\nDue on Canvas by *8:00 PM* tonight. 🎓`)
     return twimlOk()
@@ -163,11 +163,7 @@ ${env.APP_URL}`)
   // Handle VOICE SETUP
   if (upperText.startsWith('VOICE:')) {
     const profileText = rawText.slice(6).trim()
-    await env.JOURNAL_KV.put('voice_profile', JSON.stringify({
-      description: profileText,
-      sample: '',
-      rules: [],
-    }))
+    await saveVoiceProfile(env.DB, { description: profileText, sample: '', rules: [] })
     await notify(env, from, `✅ Voice profile saved! I'll write in your style from now on.`)
     return twimlOk()
   }
@@ -175,12 +171,12 @@ ${env.APP_URL}`)
   // If reviewing → treat message as an edit
   if (entry.status === 'reviewing' && entry.sections) {
     try {
-      const voice = await getVoiceProfile(env.JOURNAL_KV)
+      const voice = await getVoiceProfile(env.DB)
       const { sections, confirmationMessage } = await applyEdit(
         env.CLAUDE_API_KEY, entry, rawText, voice
       )
       entry.sections = sections
-      await saveDay(env.JOURNAL_KV, entry)
+      await upsertDay(env.DB, entry)
       await notify(env, from, `${confirmationMessage}\n\nReply *DONE* when ready to export, or keep adding edits.`)
     } catch (e) {
       await notify(env, from,
@@ -200,7 +196,7 @@ ${env.APP_URL}`)
     timestamp: new Date().toISOString(),
   }
   entry.jottings.push(jotting)
-  await saveDay(env.JOURNAL_KV, entry)
+  await upsertDay(env.DB, entry)
 
   // Only confirm the first jotting of the day
   if (entry.jottings.length === 1) {

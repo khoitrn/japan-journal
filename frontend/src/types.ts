@@ -25,6 +25,7 @@ export interface ObjectiveConnection {
 }
 
 export interface Photo {
+  id?: string   // UUID from DB — present for admin R2 photos, absent for guest base64 photos
   url: string
   caption: string
 }

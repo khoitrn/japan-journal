@@ -1,15 +1,18 @@
 import { useRef, useState, useCallback } from 'react'
 import heic2any from 'heic2any'
 import type { Photo } from '../types'
+import { uploadPhoto, deletePhoto } from '../utils/api'
 
 interface Props {
   photos: Photo[]
   onChange: (photos: Photo[]) => void
+  isAdmin: boolean
+  dayNum: number
 }
 
-const MAX_DIM = 1600  // cap iPhone 48MP photos to ~2MP so base64 stays under storage limits
+const MAX_DIM = 1600
 
-async function canvasConvert(file: File): Promise<string> {
+async function canvasConvert(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
@@ -25,33 +28,32 @@ async function canvasConvert(file: File): Promise<string> {
       canvas.height = h
       canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
       URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.82))
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('canvas toBlob failed')); return }
+        resolve(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
+      }, 'image/jpeg', 0.82)
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('canvas decode failed')) }
     img.src = url
   })
 }
 
-async function toJpegDataUrl(file: File): Promise<string> {
+async function toResizedFile(file: File): Promise<File> {
   const name = file.name.toLowerCase()
   const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif')
   if (isHeic) {
-    // Try native canvas first (Safari on macOS/iOS), fall back to heic2any for Chrome
     try {
       return await canvasConvert(file)
     } catch {
       const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 })
       const blob = Array.isArray(result) ? result[0] : result
-      // Still resize the heic2any output through canvas
       return await canvasConvert(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
     }
   }
-  // All non-HEIC files (including iOS-converted JPEGs from the Photos library)
-  // must also go through canvas so the 1600px cap is always applied.
   return canvasConvert(file)
 }
 
-export default function PhotoUpload({ photos, onChange }: Props) {
+export default function PhotoUpload({ photos, onChange, isAdmin, dayNum }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [converting, setConverting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,25 +61,42 @@ export default function PhotoUpload({ photos, onChange }: Props) {
 
   const processFiles = useCallback(async (files: File[]) => {
     const remaining = 5 - photos.length
-    const batch = files.filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)).slice(0, remaining)
+    const batch = files
+      .filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name))
+      .slice(0, remaining)
     if (!batch.length) return
     setConverting(true)
     setError(null)
     const results: Photo[] = []
     let failed = 0
+
     for (const file of batch) {
       try {
-        const url = await toJpegDataUrl(file)
-        results.push({ url, caption: '' })
+        const resized = await toResizedFile(file)
+        if (isAdmin) {
+          // Upload to R2 — get back a permanent URL
+          const { id, url } = await uploadPhoto(dayNum, resized)
+          results.push({ id, url, caption: '' })
+        } else {
+          // Guest: store as base64 in localStorage
+          const url = await new Promise<string>((res, rej) => {
+            const reader = new FileReader()
+            reader.onload = e => res(e.target?.result as string)
+            reader.onerror = rej
+            reader.readAsDataURL(resized)
+          })
+          results.push({ url, caption: '' })
+        }
       } catch (err) {
         failed++
         console.error(err)
       }
     }
+
     if (results.length) onChange([...photos, ...results])
-    if (failed) setError(`${failed} photo${failed > 1 ? 's' : ''} couldn't be converted — try exporting as JPEG from Photos first.`)
+    if (failed) setError(`${failed} photo${failed > 1 ? 's' : ''} couldn't be uploaded — try again.`)
     setConverting(false)
-  }, [photos, onChange])
+  }, [photos, onChange, isAdmin, dayNum])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) processFiles(Array.from(e.target.files))
@@ -92,15 +111,19 @@ export default function PhotoUpload({ photos, onChange }: Props) {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setDragging(false)
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length) processFiles(files)
+    processFiles(Array.from(e.dataTransfer.files))
   }
 
-  const updateCaption = (i: number, caption: string) => {
+  const remove = async (i: number) => {
+    const photo = photos[i]
+    if (isAdmin && photo.id) {
+      try { await deletePhoto(photo.id) } catch { /* ignore — already removed from UI */ }
+    }
+    onChange(photos.filter((_, idx) => idx !== i))
+  }
+
+  const updateCaption = (i: number, caption: string) =>
     onChange(photos.map((p, idx) => idx === i ? { ...p, caption } : p))
-  }
-
-  const remove = (i: number) => onChange(photos.filter((_, idx) => idx !== i))
 
   return (
     <div
@@ -110,7 +133,8 @@ export default function PhotoUpload({ photos, onChange }: Props) {
       onDragLeave={() => setDragging(false)}
     >
       <p style={{ fontSize: 12, color: '#6272a4', margin: '0 0 10px' }}>
-        Upload 3–5 photos. Add a brief caption explaining why you chose each. HEIC converted automatically. You can also <strong>paste</strong> or <strong>drag &amp; drop</strong>.
+        Upload 3–5 photos. HEIC converted automatically. You can also <strong>paste</strong> or <strong>drag &amp; drop</strong>.
+        {isAdmin && <span style={{ color: '#50fa7b' }}> Photos upload directly to cloud storage.</span>}
       </p>
       {error && (
         <div style={{ background: '#ff555522', border: '1px solid #ff5555', borderRadius: 6, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#ff5555', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -120,7 +144,7 @@ export default function PhotoUpload({ photos, onChange }: Props) {
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, border: dragging ? '2px dashed #bd93f9' : '2px solid transparent', borderRadius: 8, padding: dragging ? 8 : 0, transition: 'all 0.15s' }}>
         {photos.map((photo, i) => (
-          <div key={i} style={{ width: 160, background: '#44475a', border: '1px solid #6272a4', borderRadius: 6, overflow: 'hidden' }}>
+          <div key={photo.id ?? i} style={{ width: 160, background: '#44475a', border: '1px solid #6272a4', borderRadius: 6, overflow: 'hidden' }}>
             <div style={{ position: 'relative' }}>
               <img src={photo.url} alt="" style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }} />
               <button onClick={() => remove(i)} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#f8f8f2', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', fontSize: 12, lineHeight: '20px', textAlign: 'center', padding: 0 }}>×</button>
@@ -134,7 +158,6 @@ export default function PhotoUpload({ photos, onChange }: Props) {
             />
           </div>
         ))}
-
         {photos.length < 5 && (
           <button
             onClick={() => !converting && inputRef.current?.click()}
@@ -142,7 +165,7 @@ export default function PhotoUpload({ photos, onChange }: Props) {
             style={{ width: 160, height: 160, border: '2px dashed #6272a4', borderRadius: 6, background: 'none', cursor: converting ? 'wait' : 'pointer', color: '#6272a4', fontSize: 13, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: converting ? 0.6 : 1 }}
           >
             <span style={{ fontSize: 28 }}>{converting ? '⏳' : '📷'}</span>
-            <span>{converting ? 'Converting…' : 'Add photo'}</span>
+            <span>{converting ? 'Uploading…' : 'Add photo'}</span>
             <span style={{ fontSize: 11 }}>{photos.length}/5</span>
           </button>
         )}

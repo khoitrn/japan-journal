@@ -10,6 +10,15 @@ crons = ["30 10 * * *"]
 binding = "JOURNAL_KV"
 id = "55167b95c8d64d249cb31e502acde33a"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "japan-journal-db"
+database_id = "FILL_IN_AFTER_CREATE"
+
+[[r2_buckets]]
+binding = "PHOTOS_R2"
+bucket_name = "japan-journal-photos"
+
 [vars]
 APP_URL = "https://journal.khoitrn.com"
 
