@@ -36,26 +36,19 @@ async function toJpegDataUrl(file: File): Promise<string> {
   const name = file.name.toLowerCase()
   const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif')
   if (isHeic) {
-    // Try native canvas first (works in Safari on macOS/iOS), fall back to heic2any for Chrome
+    // Try native canvas first (Safari on macOS/iOS), fall back to heic2any for Chrome
     try {
       return await canvasConvert(file)
     } catch {
       const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 })
       const blob = Array.isArray(result) ? result[0] : result
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = e => resolve(e.target?.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      })
+      // Still resize the heic2any output through canvas
+      return await canvasConvert(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
     }
   }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = e => resolve(e.target?.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+  // All non-HEIC files (including iOS-converted JPEGs from the Photos library)
+  // must also go through canvas so the 1600px cap is always applied.
+  return canvasConvert(file)
 }
 
 export default function PhotoUpload({ photos, onChange }: Props) {
