@@ -115,5 +115,29 @@ ${name ? `<div class="student-name">${name}</div>` : ''}
   win.document.write(html)
   win.document.close()
   win.focus()
+
+  // Wait for all images to finish decoding before triggering print.
+  // Even with embedded data URLs the browser still needs to decode them,
+  // and calling print() too early causes a blank first attempt.
+  await new Promise<void>(resolve => {
+    const tryPrint = () => {
+      const imgs = Array.from(win.document.images)
+      const pending = imgs.filter(img => !img.complete)
+      if (pending.length === 0) { resolve(); return }
+      let remaining = pending.length
+      const done = () => { if (--remaining === 0) resolve() }
+      pending.forEach(img => {
+        img.addEventListener('load', done, { once: true })
+        img.addEventListener('error', done, { once: true })
+      })
+    }
+    if (win.document.readyState === 'complete') {
+      tryPrint()
+    } else {
+      win.addEventListener('load', tryPrint, { once: true })
+    }
+    setTimeout(resolve, 6000)  // safety fallback
+  })
+
   win.print()
 }
