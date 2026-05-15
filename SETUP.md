@@ -1,5 +1,40 @@
 # Japan Journal — Setup Guide
 
+## Storage architecture (updated May 2026)
+
+Three Cloudflare services handle all data:
+
+| Service | What it stores | Why |
+|---|---|---|
+| **D1** (SQLite database) | Journal entries, jottings, photo metadata, voice profile | Structured data with real queries. Strongly consistent — no more "save then disappear" bugs. |
+| **R2** (object storage) | Photo image files | Photos live here as actual files, not stuffed into text records. Zero egress cost, permanent URLs. |
+| **KV** (key-value) | Auth session tokens | Still fast and good for simple key lookups. |
+
+**How a photo upload works:**
+1. You pick a photo on your phone → resized to 1600px → sent to the Worker
+2. Worker saves the image file to **R2** → gets back a permanent URL
+3. Worker writes `{id, day, r2_key}` into **D1**'s photos table
+4. Your journal stores the URL, not the raw image — tiny, fast, reliable
+
+**D1 table layout:**
+```
+journal_entries  →  day, date, city, status, jottings (JSON), sections (JSON, no photos)
+photos           →  id, day, r2_key, caption, position
+voice_profile    →  description, sample, rules (JSON)
+```
+
+**One-time migration** (if setting up from scratch with existing KV data):
+```js
+// Run in browser console while logged in as admin at journal.khoitrn.com
+fetch('https://japan-journal.khoitrn.workers.dev/api/migrate', {
+  method: 'POST',
+  headers: { Authorization: 'Bearer ' + sessionStorage.getItem('admin_token') }
+}).then(r => r.json()).then(console.log)
+// → { ok: true, migrated: N }
+```
+
+---
+
 ## One-time setup (do this before May 11)
 
 ### 1. Twilio WhatsApp Sandbox
@@ -12,17 +47,24 @@
 ```bash
 cd worker
 npm install
-npx wrangler kv:namespace create JOURNAL_KV
-# Copy the ID it gives you into wrangler.toml
 
+# Create storage resources
+npx wrangler kv:namespace create JOURNAL_KV       # copy ID → wrangler.toml
+npx wrangler d1 create japan-journal-db --location enam   # copy ID → wrangler.toml
+npx wrangler r2 bucket create japan-journal-photos
+
+# Apply D1 schema
+npx wrangler d1 execute japan-journal-db --remote --file=migrations/0001_initial.sql
+
+# Set secrets
 npx wrangler secret put TWILIO_ACCOUNT_SID
 npx wrangler secret put TWILIO_AUTH_TOKEN
-npx wrangler secret put TWILIO_WHATSAPP_FROM   # sandbox number without +
+npx wrangler secret put TWILIO_WHATSAPP_FROM   # sandbox number e.g. +14155238886
 npx wrangler secret put CLAUDE_API_KEY
 npx wrangler secret put USER_PHONE             # your number e.g. +12223334444
 
 npx wrangler deploy
-# Note the worker URL it gives you (e.g. https://japan-journal.abc.workers.dev)
+# Note the worker URL (e.g. https://japan-journal.khoitrn.workers.dev)
 ```
 
 Set the Twilio webhook URL to: `https://japan-journal.YOUR.workers.dev/webhook`
