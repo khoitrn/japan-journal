@@ -125,7 +125,10 @@ export default function DayView() {
     if (!isAdmin) { setSaveStatus('saved'); return }  // guests: lsSet() in update() is enough
     setSaveStatus('saving')
     try {
-      await saveDay(day, s)
+      const saved = await saveDay(day, s)
+      // Use the confirmed-saved entry to refresh localStorage so photos
+      // survive a reload even if KV is temporarily stale on next read.
+      if (saved?.sections) lsSet(saved.sections)
       setSaveStatus('saved')
       pendingSync.current = false
     } catch {

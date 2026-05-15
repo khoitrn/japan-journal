@@ -70,13 +70,10 @@ export default {
       }
       if (request.method === 'POST') {
         const body = await request.json() as Record<string, unknown>
-        const days = await getAllDays(env.JOURNAL_KV)
-        let entry = days.find(d => d.day === dayNum)
-        if (!entry) {
-          const tripDay = TRIP_DAYS.find(d => d.day === dayNum)
-          if (!tripDay) return json({ error: 'not found' }, 404)
-          entry = { day: dayNum, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] }
-        }
+        const tripDay = TRIP_DAYS.find(d => d.day === dayNum)
+        if (!tripDay) return json({ error: 'not found' }, 404)
+        let entry = await getDay(env.JOURNAL_KV, tripDay.date)
+        if (!entry) entry = { day: dayNum, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] }
         if (body.sections) entry.sections = body.sections as typeof entry.sections
         if (body.status)   entry.status   = body.status   as typeof entry.status
         await saveDay(env.JOURNAL_KV, entry)
@@ -88,8 +85,9 @@ export default {
     const exportMatch = pathname.match(/^\/api\/day\/(\d+)\/export$/)
     if (exportMatch && request.method === 'POST') {
       const dayNum = parseInt(exportMatch[1])
-      const days = await getAllDays(env.JOURNAL_KV)
-      const entry = days.find(d => d.day === dayNum)
+      const tripDay2 = TRIP_DAYS.find(d => d.day === dayNum)
+      if (!tripDay2) return json({ error: 'not found' }, 404)
+      const entry = await getDay(env.JOURNAL_KV, tripDay2.date)
       if (!entry) return json({ error: 'not found' }, 404)
       entry.status = 'exported'
       entry.exportedAt = new Date().toISOString()
