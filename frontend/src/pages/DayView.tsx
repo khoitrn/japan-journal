@@ -59,6 +59,7 @@ export default function DayView() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle')
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sectionsRef = useRef(sections)
+  const pendingSync = useRef(false)
 
   const localKey = `journal:day:${day}`
   const photoKey = `journal:day:${day}:photos`
@@ -105,16 +106,24 @@ export default function DayView() {
         setEntry({ day, date: tripDay.date, city: tripDay.city, status: 'jotting', jottings: [] })
       }
     })
+
+    const handleOnline = () => {
+      if (pendingSync.current) persist(sectionsRef.current)
+    }
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
   }, [day])
 
   const persist = useCallback(async (s: JournalSections) => {
+    if (!isAdmin) { setSaveStatus('saved'); return }  // guests: lsSet() in update() is enough
     setSaveStatus('saving')
     try {
-      if (isAdmin) await saveDay(day, s)
-      else localStorage.setItem(`guest:day:${day}`, JSON.stringify(s))
+      await saveDay(day, s)
       setSaveStatus('saved')
+      pendingSync.current = false
     } catch {
       setSaveStatus('error')
+      pendingSync.current = true  // retry when back online
     }
   }, [isAdmin, day])
 
