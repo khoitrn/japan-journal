@@ -1,6 +1,22 @@
 import type { DayEntry } from '../types'
 
-export function printDay(entry: DayEntry, name?: string): void {
+async function toEmbeddedDataUrl(url: string): Promise<string> {
+  if (!url || url.startsWith('data:')) return url  // already embedded (guest base64)
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = e => resolve(e.target?.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return url  // fall back to URL if fetch fails
+  }
+}
+
+export async function printDay(entry: DayEntry, name?: string): Promise<void> {
   const sections = entry.sections
   if (!sections) return
 
@@ -18,11 +34,15 @@ export function printDay(entry: DayEntry, name?: string): void {
     .map(o => `<tr><td>${o.objectiveLabel} (Obj. ${o.objectiveKey.replace('obj', '')})</td><td>${o.connection}</td></tr>`)
     .join('')
 
+  // Pre-fetch all photos as embedded data URLs so the print window
+  // is fully self-contained — no network waits after it opens.
+  const photoUrls = await Promise.all(
+    sections.photos.filter(p => p.url).map(p => toEmbeddedDataUrl(p.url))
+  )
   const photos = sections.photos
     .filter(p => p.url)
-    .map(p => `<div class="photo-item"><img src="${p.url}" /><p>${p.caption}</p></div>`)
+    .map((p, i) => `<div class="photo-item"><img src="${photoUrls[i]}" /><p>${p.caption}</p></div>`)
     .join('')
-
 
   const html = `<!DOCTYPE html>
 <html>

@@ -57,6 +57,7 @@ export default function DayView() {
   const [entry, setEntry] = useState<DayEntry | null>(null)
   const [sections, setSections] = useState<JournalSections>(EMPTY_SECTIONS)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle')
+  const [exporting, setExporting] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sectionsRef = useRef(sections)
   const pendingSync = useRef(false)
@@ -160,11 +161,17 @@ export default function DayView() {
   }
 
   const handleExport = async () => {
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    await persist(sectionsRef.current)
-    if (isAdmin) await markExported(day)
-    const exportName = isAdmin ? ADMIN_NAME : (sectionsRef.current.studentName?.trim() || undefined)
-    printDay({ ...entry!, sections: sectionsRef.current }, exportName)
+    if (exporting) return
+    setExporting(true)
+    try {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      await persist(sectionsRef.current)
+      if (isAdmin) await markExported(day)
+      const exportName = isAdmin ? ADMIN_NAME : (sectionsRef.current.studentName?.trim() || undefined)
+      await printDay({ ...entry!, sections: sectionsRef.current }, exportName)
+    } finally {
+      setExporting(false)
+    }
   }
 
   if (!tripDay) return <div style={{ padding: 40, textAlign: 'center', color: '#f8f8f2' }}>Day {day} not found.</div>
@@ -273,7 +280,9 @@ export default function DayView() {
           {saveStatus === 'error'  && '⚠ failed'}
         </span>
         <button onClick={handleClear} style={clearBtn}>Clear</button>
-        <button onClick={handleExport} style={exportBtn}>Export PDF</button>
+        <button onClick={handleExport} disabled={exporting} style={{ ...exportBtn, opacity: exporting ? 0.6 : 1, cursor: exporting ? 'wait' : 'pointer' }}>
+          {exporting ? 'Preparing…' : 'Export PDF'}
+        </button>
       </div>
     </div>
   )
