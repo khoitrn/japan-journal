@@ -16,7 +16,7 @@ async function toEmbeddedDataUrl(url: string): Promise<string> {
   }
 }
 
-export async function printDay(entry: DayEntry, name?: string): Promise<void> {
+export async function printDay(entry: DayEntry, name?: string, win?: Window): Promise<void> {
   const sections = entry.sections
   if (!sections) return
 
@@ -110,17 +110,26 @@ ${name ? `<div class="student-name">${name}</div>` : ''}
 </body>
 </html>`
 
-  // Use a Blob URL so the window loads like a normal page.
-  // This gives us a reliable load event that fires only after all
-  // inline base64 images are fully decoded and the page is ready to print.
+  // Navigate the pre-opened window to a Blob URL.
+  // Using a Blob URL (rather than document.write) gives a reliable load
+  // event that fires only after all embedded images are fully decoded.
   const blob = new Blob([html], { type: 'text/html; charset=utf-8' })
   const blobUrl = URL.createObjectURL(blob)
-  const win = window.open(blobUrl, '_blank')
-  if (!win) { URL.revokeObjectURL(blobUrl); return }
+  const printWin = win ?? window.open(blobUrl, '_blank')
+  if (!printWin) { URL.revokeObjectURL(blobUrl); return }
 
-  win.addEventListener('load', () => {
-    win.focus()
-    win.print()
-    URL.revokeObjectURL(blobUrl)
-  }, { once: true })
+  if (win) {
+    // Window already open — navigate it to the prepared blob
+    win.location.replace(blobUrl)
+  }
+
+  await new Promise<void>(resolve => {
+    printWin.addEventListener('load', () => {
+      printWin.focus()
+      printWin.print()
+      URL.revokeObjectURL(blobUrl)
+      resolve()
+    }, { once: true })
+    setTimeout(resolve, 8000)  // safety fallback
+  })
 }

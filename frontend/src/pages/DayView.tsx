@@ -162,13 +162,30 @@ export default function DayView() {
 
   const handleExport = async () => {
     if (exporting) return
+
+    // Open the print window NOW, synchronously inside the tap handler.
+    // iOS Safari blocks window.open() called after any await — it treats
+    // it as a popup rather than a user-initiated action.
+    const printWindow = window.open('about:blank', '_blank')
+    if (!printWindow) {
+      alert('Allow popups for this site to export PDF.')
+      return
+    }
+    printWindow.document.write(
+      '<html><body style="font-family:sans-serif;text-align:center;padding:60px;color:#555">' +
+      '<p style="font-size:24px">⏳</p><p>Preparing your PDF…</p></body></html>'
+    )
+    printWindow.document.close()
+
     setExporting(true)
     try {
       if (saveTimer.current) clearTimeout(saveTimer.current)
       await persist(sectionsRef.current)
       if (isAdmin) await markExported(day)
       const exportName = isAdmin ? ADMIN_NAME : (sectionsRef.current.studentName?.trim() || undefined)
-      await printDay({ ...entry!, sections: sectionsRef.current }, exportName)
+      await printDay({ ...entry!, sections: sectionsRef.current }, exportName, printWindow)
+    } catch {
+      printWindow.close()
     } finally {
       setExporting(false)
     }
