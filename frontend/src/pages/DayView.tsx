@@ -65,11 +65,13 @@ export default function DayView() {
   const localKey = `${role}:journal:day:${day}`
   const photoKey = `${role}:journal:day:${day}:photos`
 
-  // Photos are stored in a separate localStorage key because base64 images
-  // can exceed the 5 MB quota and silently prevent the main key from saving.
-  const lsSet = (sections: JournalSections) => {
-    try { localStorage.setItem(localKey, JSON.stringify({ ...sections, photos: [] })) } catch { /* ignore */ }
-    try { localStorage.setItem(photoKey, JSON.stringify(sections.photos)) } catch { /* ignore quota on large photos */ }
+  // Returns false if the text sections failed to write (quota exceeded).
+  // Photo write failures are tolerated separately — text is always the priority.
+  const lsSet = (sections: JournalSections): boolean => {
+    let ok = true
+    try { localStorage.setItem(localKey, JSON.stringify({ ...sections, photos: [] })) } catch { ok = false }
+    try { localStorage.setItem(photoKey, JSON.stringify(sections.photos)) } catch { /* best-effort */ }
+    return ok
   }
 
   const lsGet = (): JournalSections | null => {
@@ -123,7 +125,12 @@ export default function DayView() {
   }, [day])
 
   const persist = useCallback(async (s: JournalSections) => {
-    if (!isAdmin) { setSaveStatus('saved'); return }  // guests: lsSet() in update() is enough
+    if (!isAdmin) {
+      // Re-verify the write succeeded — lsSet may have silently failed in update()
+      const ok = lsSet(s)
+      setSaveStatus(ok ? 'saved' : 'error')
+      return
+    }
     setSaveStatus('saving')
     try {
       const saved = await saveDay(day, s)
@@ -142,7 +149,9 @@ export default function DayView() {
     const next = { ...sectionsRef.current, [key]: value }
     sectionsRef.current = next
     setSections(next)
-    lsSet(next)
+    const ok = lsSet(next)
+    // For guests, a failed write means data will be lost on navigation — surface it now.
+    if (!isAdmin && !ok) { setSaveStatus('error'); return }
     setSaveStatus('pending')
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => persist(next), 1500)
@@ -294,7 +303,7 @@ export default function DayView() {
           {saveStatus === 'pending' && '● unsaved'}
           {saveStatus === 'saving' && '↑ saving…'}
           {saveStatus === 'saved'  && '✓ saved'}
-          {saveStatus === 'error'  && '⚠ failed'}
+          {saveStatus === 'error'  && (isAdmin ? '⚠ save failed' : '⚠ device storage full — export PDF now to keep your work')}
         </span>
         <button onClick={handleClear} style={clearBtn}>Clear</button>
         <button onClick={handleExport} disabled={exporting} style={{ ...exportBtn, opacity: exporting ? 0.6 : 1, cursor: exporting ? 'wait' : 'pointer' }}>

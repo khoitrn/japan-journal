@@ -10,16 +10,14 @@ interface Props {
   dayNum: number
 }
 
-const MAX_DIM = 1600
-
-async function canvasConvert(file: File): Promise<File> {
+async function canvasConvert(file: File, maxDim: number, quality: number): Promise<File> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
       let w = img.naturalWidth, h = img.naturalHeight
-      if (w > MAX_DIM || h > MAX_DIM) {
-        const ratio = Math.min(MAX_DIM / w, MAX_DIM / h)
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h)
         w = Math.round(w * ratio)
         h = Math.round(h * ratio)
       }
@@ -31,26 +29,26 @@ async function canvasConvert(file: File): Promise<File> {
       canvas.toBlob(blob => {
         if (!blob) { reject(new Error('canvas toBlob failed')); return }
         resolve(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
-      }, 'image/jpeg', 0.82)
+      }, 'image/jpeg', quality)
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('canvas decode failed')) }
     img.src = url
   })
 }
 
-async function toResizedFile(file: File): Promise<File> {
+async function toResizedFile(file: File, maxDim: number, quality: number): Promise<File> {
   const name = file.name.toLowerCase()
   const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif')
   if (isHeic) {
     try {
-      return await canvasConvert(file)
+      return await canvasConvert(file, maxDim, quality)
     } catch {
       const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 })
       const blob = Array.isArray(result) ? result[0] : result
-      return await canvasConvert(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
+      return await canvasConvert(new File([blob], 'photo.jpg', { type: 'image/jpeg' }), maxDim, quality)
     }
   }
-  return canvasConvert(file)
+  return canvasConvert(file, maxDim, quality)
 }
 
 export default function PhotoUpload({ photos, onChange, isAdmin, dayNum }: Props) {
@@ -72,7 +70,12 @@ export default function PhotoUpload({ photos, onChange, isAdmin, dayNum }: Props
 
     for (const file of batch) {
       try {
-        const resized = await toResizedFile(file)
+        // Admin photos go to R2 — keep full quality.
+        // Guest photos go to localStorage — use smaller size to stay under the 5 MB quota
+        // across all days (14 days × up to 5 photos would overflow at full size).
+        const maxDim = isAdmin ? 1600 : 1200
+        const quality = isAdmin ? 0.82 : 0.72
+        const resized = await toResizedFile(file, maxDim, quality)
         if (isAdmin) {
           // Upload to R2 — get back a permanent URL
           const { id, url } = await uploadPhoto(dayNum, resized)
